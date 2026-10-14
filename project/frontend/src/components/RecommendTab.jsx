@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Cpu, Wifi, Radio, HeartPulse, CheckCircle, Sparkles, Sliders } from 'lucide-react';
+import { apiFetch, apiUrl } from '../api';
 
 const TRACK_VISUALS = [
-  { icon: Radio, color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.08)' },
-  { icon: Wifi, color: '#a855f7', bg: 'rgba(168, 85, 247, 0.08)' },
-  { icon: HeartPulse, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.08)' },
-  { icon: Radio, color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.08)' },
-  { icon: Wifi, color: '#f97316', bg: 'rgba(249, 115, 22, 0.08)' },
-  { icon: Cpu, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.08)' }
+  { icon: Radio, color: 'var(--brand-accent)', bg: 'rgba(213, 19, 42, 0.08)' },
+  { icon: Wifi, color: 'var(--gold-ink)', bg: 'rgba(246, 196, 0, 0.08)' },
+  { icon: HeartPulse, color: 'var(--brand-accent)', bg: 'rgba(213, 19, 42, 0.08)' },
+  { icon: Radio, color: 'var(--brand-accent)', bg: 'rgba(213, 19, 42, 0.08)' },
+  { icon: Wifi, color: 'var(--gold-ink)', bg: 'rgba(246, 196, 0, 0.08)' },
+  { icon: Cpu, color: 'var(--gold-ink)', bg: 'var(--gold-soft)' }
 ];
 
 export default function RecommendTab() {
@@ -19,7 +20,7 @@ export default function RecommendTab() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/student/tracks')
+    apiFetch(apiUrl('/api/student/tracks'))
       .then(res => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
       .then(data => {
         const loaded = (data.tracks || []).map((track, index) => ({
@@ -29,17 +30,17 @@ export default function RecommendTab() {
           ...TRACK_VISUALS[index % TRACK_VISUALS.length]
         }));
         setTracks(loaded);
-        if (loaded.length && !loaded.some(track => track.id === selectedTrack)) {
-          setSelectedTrack(loaded[0].id);
+        if (loaded.length) {
+          setSelectedTrack(current => loaded.some(track => track.id === current) ? current : loaded[0].id);
         }
       })
       .catch(err => console.error('Lỗi tải danh sách mô-đun:', err));
   }, []);
 
-  const fetchRecommendation = async () => {
+  const fetchRecommendation = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/student/recommend', {
+      const res = await apiFetch(apiUrl('/api/student/recommend'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -55,11 +56,11 @@ export default function RecommendTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedTrack, maxCredits, isSummer]);
 
   useEffect(() => {
     fetchRecommendation();
-  }, [selectedTrack, maxCredits, isSummer]);
+  }, [fetchRecommendation]);
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -90,7 +91,7 @@ export default function RecommendTab() {
                 onClick={() => setSelectedTrack(t.id)}
                 style={{
                   background: isSelected ? t.bg : 'var(--bg-card)',
-                  border: isSelected ? `2px solid ${t.color}` : '1px solid var(--border-subtle)',
+                  border: isSelected ? '2px solid var(--hust-red)' : '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-lg)',
                   padding: '18px',
                   cursor: 'pointer',
@@ -103,7 +104,7 @@ export default function RecommendTab() {
                     width: '40px',
                     height: '40px',
                     borderRadius: '10px',
-                    background: isSelected ? t.color : 'rgba(150, 150, 150, 0.1)',
+                    background: isSelected ? 'var(--hust-red)' : t.bg,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -136,10 +137,10 @@ export default function RecommendTab() {
         gap: '20px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <Sliders size={20} color="#0284c7" />
+          <Sliders size={20} color="var(--brand-accent)" />
           <div>
             <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-              Số tín chỉ tối đa muốn đăng ký: <strong style={{ color: '#0284c7', fontSize: '1.15rem' }}>{maxCredits} TC</strong>
+              Số tín chỉ tối đa muốn đăng ký: <strong style={{ color: 'var(--brand-accent)', fontSize: '1.15rem' }}>{maxCredits} TC</strong>
             </span>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
               Quy chế HUST: Tối đa 24 TC (Kỳ chính) / 8 TC (Kỳ hè)
@@ -175,7 +176,7 @@ export default function RecommendTab() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Sparkles size={20} color="var(--hust-red)" />
+              <Sparkles size={20} color="var(--brand-accent)" />
               <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)' }}>
                 Danh sách Môn học Tối ưu Được Đề xuất
               </h3>
@@ -222,8 +223,8 @@ export default function RecommendTab() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    background: 'rgba(99, 102, 241, 0.15)',
-                    color: 'var(--indigo)',
+                    background: 'rgba(213, 19, 42, 0.15)',
+                    color: 'var(--brand-accent)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -234,14 +235,14 @@ export default function RecommendTab() {
                   </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <strong style={{ color: '#0284c7', fontSize: '1.05rem' }}>{c.code}</strong>
+                      <strong style={{ color: 'var(--brand-accent)', fontSize: '1.05rem' }}>{c.code}</strong>
                       <span style={{ fontSize: '0.98rem', color: 'var(--text-primary)', fontWeight: '600' }}>{c.name}</span>
                       <span className={c.is_compulsory ? "badge badge-hust" : "badge badge-indigo"}>
                         {c.is_compulsory ? "Bắt buộc" : "Tự chọn"}
                       </span>
                     </div>
                     <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      {c.priority_reason} • <span style={{ color: '#0284c7' }}>{c.prerequisite_summary}</span>
+                      {c.priority_reason} • <span style={{ color: 'var(--brand-accent)' }}>{c.prerequisite_summary}</span>
                     </div>
                   </div>
                 </div>

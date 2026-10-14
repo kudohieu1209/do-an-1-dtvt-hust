@@ -1,0 +1,217 @@
+% Báo cáo tiến độ Đồ án 1 — biên dịch bằng XeLaTeX:
+%   latexmk -xelatex bao_cao_tien_do.tex
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,top=2.2cm,bottom=2.2cm,left=2.5cm,right=2cm]{geometry}
+\usepackage{fontspec}
+\usepackage[vietnamese]{babel}
+\setmainfont{texgyretermes}[
+  Extension=.otf,
+  UprightFont=*-regular,
+  BoldFont=*-bold,
+  ItalicFont=*-italic,
+  BoldItalicFont=*-bolditalic]
+\setmonofont{DejaVu Sans Mono}[Scale=0.85]
+
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,calc}
+\usepackage[hidelinks]{hyperref}
+
+% ---------------------------------------------------------------- thông tin
+\newcommand{\tendetai}{HUST Course Advisor \& Degree Audit Engine}
+
+
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.1em}{0.5em}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection.}{0.5em}{}
+\titlespacing*{\subsection}{0pt}{0.7em}{0.3em}
+
+\setlist{itemsep=1pt,topsep=3pt,leftmargin=1.4em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\renewcommand{\arraystretch}{1.25}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+\newcommand{\xong}{Xong}
+\newcommand{\dang}{Đang làm}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\begin{document}
+
+% ---------------------------------------------------------------- bìa
+% Bìa theo mẫu tham_khao/report/src/frontmatter/cover.tex
+\newgeometry{top=2cm,bottom=2cm,left=2cm,right=2cm}
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \draw[line width=1.0pt]
+    ($(current page.north west)+(1.55cm,-1.35cm)$)
+    rectangle
+    ($(current page.south east)+(-1.55cm,1.35cm)$);
+  \draw[line width=0.4pt]
+    ($(current page.north west)+(1.63cm,-1.43cm)$)
+    rectangle
+    ($(current page.south east)+(-1.63cm,1.43cm)$);
+\end{tikzpicture}
+\begin{center}
+  {\bfseries\fontsize{21}{26}\selectfont
+  ĐẠI HỌC BÁCH KHOA HÀ NỘI\\
+  TRƯỜNG ĐIỆN -- ĐIỆN TỬ\par}
+
+  \vspace{0.15cm}
+  \rule{6cm}{0.4pt}
+
+  \vspace{0.8cm}
+  \includegraphics[height=4.8cm]{logo.png}
+
+  \vspace{0.7cm}
+  {\bfseries\fontsize{21}{26}\selectfont BÁO CÁO TIẾN ĐỘ\\[0.25cm]
+  ĐỒ ÁN 1\par}
+
+  \vspace{1.0cm}
+  {\bfseries\fontsize{18}{24}\selectfont\MakeUppercase{\tendetai}\par}
+
+  \vspace{0.3cm}
+  {\itshape\fontsize{13}{17}\selectfont Hệ thống chatbot tư vấn chọn môn, tra cứu quy chế\\
+  và rà soát tiến độ học tập\par}
+
+  \vfill
+
+  {\fontsize{13}{18}\selectfont
+  \begin{tabular}{@{}>{\bfseries}l@{\hspace{1.2em}}l@{}}
+    Giảng viên hướng dẫn: & Bùi Tiến Cường \\
+    Sinh viên thực hiện: & Mai Duy Hiếu \\
+    MSSV: & 20223967 \\
+  \end{tabular}\par}
+
+  \vfill
+  {\bfseries\fontsize{13}{17}\selectfont Hà Nội, 10/2026}
+\end{center}
+\end{titlepage}
+\restoregeometry
+\setcounter{page}{1}
+
+% ---------------------------------------------------------------- 1
+\section{Tóm tắt}
+
+Đề tài kết hợp hai hướng thầy gợi ý: \emph{(i)} hỏi đáp quy chế đào tạo, học phí, học bổng
+bằng RAG + Gemini và \emph{(ii)} chatbot tư vấn chọn môn theo CTĐT và điều kiện đăng ký.
+Hiện tại hệ thống đã chạy được đầu--cuối (giao diện web $\rightarrow$ backend
+$\rightarrow$ dữ liệu) cho ngành ET1, hai phiên bản CTĐT 2022 (K67) và
+2023 (K68). Kho RAG gồm 5 văn bản chính thức đã đối chiếu với PDF gốc
+(218 đoạn).
+
+% ---------------------------------------------------------------- 2
+\section{Kiến trúc đã triển khai}
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=5mm and 9mm,
+  box/.style={draw, rounded corners=2pt, align=center, font=\small,
+              minimum height=8mm, inner sep=4pt, fill=white},
+  db/.style={box, fill=black!6},
+  arr/.style={-{Stealth[length=2mm]}, thick}]
+  \node[box] (ui) {Frontend\\React 19 + Vite};
+  \node[box, right=of ui] (api) {FastAPI\\Router phân loại ý định};
+  \node[box, right=12mm of api, yshift=11mm] (rag) {RAG\\Retriever lai + Gemini};
+  \node[box, right=12mm of api, yshift=-11mm] (rule) {Rule Engine\\+ Recommender};
+  \node[db, right=of rag] (chroma) {ChromaDB\\5 văn bản, 218 đoạn};
+  \node[db, right=of rule] (ctdt) {CTĐT JSON\\ET1-2022, ET1-2023};
+  \node[db, below=of api] (sql) {SQLite\\lịch sử hội thoại};
+  \draw[arr, <->] (ui) -- (api);
+  \draw[arr] (api.east) -- ++(4mm,0) |- (rag.west);
+  \draw[arr] (api.east) -- ++(4mm,0) |- (rule.west);
+  \draw[arr] (rag) -- (chroma);
+  \draw[arr] (rule) -- (ctdt);
+  \draw[arr, <->] (api) -- (sql);
+\end{tikzpicture}
+\end{center}
+
+% ---------------------------------------------------------------- 3
+\section{Kết quả đã đạt được}
+
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.1cm}X>{\centering\arraybackslash}p{1.6cm}@{}}
+\toprule
+\textbf{Hạng mục} & \textbf{Kết quả cụ thể} & \textbf{Trạng thái} \\
+\midrule
+Dữ liệu CTĐT &
+  ET1-2022: 126 TC, 117 học phần, 20 nhóm, 6 mô-đun.
+  ET1-2023: 132 TC, 79 học phần, 13 nhóm, 5 mô-đun.
+  Điều kiện tiên quyết/học trước/song hành lấy từ CTT, giữ nguyên nhánh AND/OR. & \xong \\
+Kho tài liệu RAG &
+  5 văn bản đã kiểm chứng: CTĐT ET1 2022 và 2023; Quy chế đào tạo 2025
+  (QĐ 5445/QĐ-ĐHBK); Sổ tay sinh viên 2026; QĐ học phí 2025--2026.
+  Mỗi đoạn lưu metadata loại văn bản, thời gian hiệu lực, URL nguồn. & \xong \\
+Pipeline RAG &
+  Chia đoạn theo Điều/Khoản $\rightarrow$ ChromaDB $\rightarrow$ truy xuất lai
+  (vector + từ khóa + khớp chính xác mã môn/Điều) $\rightarrow$ xếp hạng lại theo
+  năm CTĐT và loại văn bản $\rightarrow$ Gemini 2.5 Flash. Khi không có API key
+  vẫn trả lời bằng trích dẫn nguyên văn. & \xong \\
+Rule Engine &
+  Kiểm tra điều kiện đăng ký; rà soát tốt nghiệp (Degree Audit); tính CPA,
+  hạn mức tín chỉ, mức cảnh báo; gợi ý môn kỳ tới theo mô-đun chuyên sâu. & \xong \\
+Chatbot &
+  Router phân loại ý định, hiểu tên gọi tắt của sinh viên (``vxl'', ``dts'', \dots).
+  Lịch sử hội thoại lưu SQLite theo MSSV (ghim, lưu trữ, xóa). & \xong \\
+Giao diện web &
+  Đã có khung các tab Chat, Tiến độ (Audit), Gợi ý môn, Lộ trình; đang hoàn thiện giao diện. & \dang \\
+Thu thập toàn trường &
+  Danh mục 68 chương trình; rà link CTĐT (46 nguồn truy cập được); trích xuất
+  14 bản nháp CTĐT và đối chiếu với 8.310 học phần trên CTT. & \dang \\
+\bottomrule
+\end{tabularx}
+
+\subsection{Công việc trong thời gian gần đây}
+\begin{itemize}
+  \item Thay 3 bản quy chế tự soạn (chưa kiểm chứng) bằng văn bản trích từ PDF chính thức.
+        Bản cũ được gắn \code{UNVERIFIED} và không còn được đưa vào chỉ mục.
+  \item Cải thiện bộ truy xuất: thêm tìm theo từ khóa và xếp hạng lại, nên câu hỏi
+        ``ET1 2023'' không còn bị trả về tài liệu 2022. Tự động xóa đoạn cũ khi văn bản thay đổi.
+  \item Sửa router: câu dạng ``kỳ tới học X thì cần môn gì trước'' được chuyển sang kiểm tra
+        điều kiện học phần thay vì gợi ý môn.
+  \item Bỏ module đăng nhập tự viết (chưa đủ an toàn), dùng hồ sơ demo. Cấu hình địa chỉ
+        API của frontend qua biến môi trường.
+\end{itemize}
+
+% ---------------------------------------------------------------- 4
+\section{Khó khăn và hướng xử lý}
+
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{5.2cm}X@{}}
+\toprule
+\textbf{Khó khăn} & \textbf{Cách đang xử lý} \\
+\midrule
+Dữ liệu điều kiện học phần trên CTT phải đăng nhập và chứa thông tin cá nhân. &
+  Thu thập bằng script mở trình duyệt để tự đăng nhập. Chỉ lưu phần cấu trúc CTĐT,
+  không công khai HTML gốc. \\
+Nguồn CTĐT các ngành không đồng nhất (HTML, PDF, XLSX; nhiều link hỏng; chỉ 6/8 PDF
+  đọc được danh mục học phần). &
+  Xây pipeline tạo bản nháp và duyệt thủ công từng CTĐT trước khi đưa vào Rule Engine.
+  Hiện mới duyệt xong ET1-2023. \\
+Quy chế 2025 đổi thuật ngữ (``cảnh cáo'' $\rightarrow$ ``cảnh báo''; học bổng loại A/B/C),
+  sinh viên vẫn hỏi theo cách cũ. &
+  Thêm bảng từ đồng nghĩa khi truy vấn. \\
+Tìm kiếm ngữ nghĩa với tiếng Việt hay nhầm Điều có số liệu gần nhau hoặc nhầm năm CTĐT. &
+  Kết hợp tìm theo từ khóa và xếp hạng lại. Nhược điểm: phần xếp hạng hiện còn nhiều
+  luật viết tay, khó mở rộng. \\
+Gemini bản miễn phí bị giới hạn lượt gọi, model cũ bị ngừng hỗ trợ. &
+  Cấu hình model qua \code{.env}. Khi không gọi được LLM, hệ thống chuyển sang trả
+  trích dẫn nguyên văn có nguồn. \\
+Chưa có cách đo chất lượng câu trả lời một cách định lượng. &
+  Dự kiến xây bộ câu hỏi đánh giá. \\
+\bottomrule
+\end{tabularx}
+
+
+\end{document}
