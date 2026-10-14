@@ -1,5 +1,6 @@
 import re
 import os
+import unicodedata
 from typing import Dict, List, Any, Optional
 from app.services.data_loader import data_loader
 from app.services.student_service import student_service
@@ -188,7 +189,7 @@ class ChatbotService:
 
         # 3. Tra cứu theo Alias sinh viên
         for alias, code in sorted(COURSE_ALIASES.items(), key=lambda x: len(x[0]), reverse=True):
-            if alias in msg_lower:
+            if self._has_any(msg_lower, [alias]):
                 if code not in detected:
                     detected.append(code)
 
@@ -202,6 +203,77 @@ class ChatbotService:
 
         return detected
 
+    @staticmethod
+    def _has_any(text: str, keywords: List[str]) -> bool:
+        """Khớp từ khóa theo ranh giới từ.
+
+        So khớp chuỗi con làm "hướng" khớp "hướng dẫn" và "ic" khớp "logic",
+        khiến câu hỏi bị định tuyến sai Agent.
+        """
+        return any(
+            re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", text)
+            for keyword in keywords
+        )
+
+    @staticmethod
+    def _is_greeting_or_intro(text: str, detected_codes: Optional[List[str]] = None) -> bool:
+        """Nhận diện các câu chào hỏi, hỏi thông tin/danh tính trợ lý, hoặc yêu cầu giới thiệu bản thân.
+        
+        Không bắt các câu có chứa mã môn học hoặc câu hỏi học thuật có nội dung thực sự.
+        """
+        if detected_codes:
+            return False
+
+        msg_clean = unicodedata.normalize("NFC", text or "").strip().lower()
+        if not msg_clean:
+            return False
+
+        # Các từ khóa nội dung học thuật/quy chế thực sự -> không phải câu chào thuần túy
+        substantive_keywords = [
+            "điều kiện", "tiên quyết", "song hành", "học trước", "đăng ký",
+            "học phần", "môn học", "tín chỉ", "quy chế", "quy định",
+            "cảnh báo", "cảnh cáo", "buộc thôi học", "học bổng", "học phí",
+            "tốt nghiệp", "đồ án", "thực tập", "cpa", "gpa", "tiến độ",
+            "tích lũy", "bảng điểm", "trượt", "tạch", "nếu rớt", "học lại",
+            "kỳ tới", "kỳ sau", "định hướng", "chuyên sâu", "đề cương", "ngành"
+        ]
+        if any(re.search(rf"(?<!\w){re.escape(kw)}(?!\w)", msg_clean) for kw in substantive_keywords):
+            return False
+
+        # Chuẩn hóa khoảng trắng và dấu câu
+        cleaned = re.sub(r"[\.,!~:;\-_]+", " ", msg_clean)
+        cleaned = " ".join(cleaned.split())
+
+        # 1. Chào hỏi đơn thuần (kèm hậu tố thân mật: nha, nhé, ơi, ạ, ...)
+        # vd: "chào", "chào bạn", "xin chào", "xin chào!", "chào bot", "hello", "hi bạn", "alo"
+        greeting_pattern = r"^(xin\s+)?chào(\s+(bạn|cậu|bot|ad|admin|mọi người))?(\s+(ạ|ơi|nha|nhé|nhá|nè|ha|nhỉ))?$"
+        hello_pattern = r"^(hello|hi|hey|alo|halo)(\s+(bạn|cậu|bot|ad|admin))?(\s+(ạ|ơi|nha|nhé|nhá|nè|ha|nhỉ))?$"
+        if re.fullmatch(greeting_pattern, cleaned) or re.fullmatch(hello_pattern, cleaned):
+            return True
+
+        # 2. Câu hỏi danh tính trợ lý (bạn là ai, bạn là ?, bạn là gì, tên bạn là gì)
+        # vd: "bạn là ?", "bạn là ai", "bạn là ai thế?", "bạn là ai vậy", "bạn tên là gì"
+        identity_pattern = r"^((xin\s+)?chào\s+(bạn\s+|bot\s+|ad\s+)?)?((bạn|cậu|mày)\s+là\s*(ai|\?|gì)|(bạn|cậu)\s+tên\s+(là\s+)?gì|tên\s+(của\s+)?(bạn|cậu)\s+là\s+gì)(\s+(thế|vậy|đấy|nhỉ|đó|ạ|hả|nhở))?\??$"
+        if re.match(identity_pattern, msg_clean) or re.match(identity_pattern, cleaned):
+            return True
+
+        # 3. Yêu cầu giới thiệu bản thân
+        # vd: "giới thiệu bản thân đi", "giới thiệu về bản thân", "bạn giới thiệu về bản thân bạn đi", "tự giới thiệu"
+        intro_pattern = r"(giới\s+thiệu\s+(chút\s+)?(về\s+)?(bản\s+thân|bạn|mình)|tự\s+giới\s+thiệu)"
+        if re.search(intro_pattern, cleaned):
+            return True
+
+        # 4. Câu hỏi năng lực / menu trợ giúp
+        # vd: "bạn có thể làm gì", "bạn giúp được gì", "bạn làm được gì", "menu", "help"
+        capability_pattern = r"^((xin\s+)?chào\s+(bạn\s+|bot\s+)?)?(bạn|bot)\s+((có\s+thể\s+)?(làm|giúp|hỗ\s+trợ)(\s+được)?\s+(gì|những\s+gì)|chức\s+năng\s+gì)"
+        if re.search(capability_pattern, cleaned):
+            return True
+
+        if cleaned in {"menu", "help", "trợ giúp", "hướng dẫn", "bắt đầu"}:
+            return True
+
+        return False
+
     def process_message(self, message: str, history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
         """
         Xử lý tin nhắn của sinh viên theo kiến trúc Hybrid Agent:
@@ -212,7 +284,8 @@ class ChatbotService:
         # Một số câu follow-up chỉ có ý nghĩa khi đọc cùng lịch sử, ví dụ
         # "trả lời lại đi bạn". Dùng câu hỏi gần nhất có nội dung để chạy lại
         # đúng Agent (course check/RAG/audit), thay vì trả lời fallback chung.
-        effective_message = (message or "").strip()
+        # Bộ gõ "Unicode tổ hợp" gửi chữ dạng NFD; đưa về NFC để khớp từ khóa.
+        effective_message = unicodedata.normalize("NFC", message or "").strip()
         if self._is_repeat_request(effective_message):
             previous_question = self._last_substantive_user_message(history, effective_message)
             if previous_question:
@@ -222,35 +295,45 @@ class ChatbotService:
         detected_codes = self._detect_courses(effective_message)
 
         # 1. Xử lý câu hỏi mô phỏng trượt môn (What-if simulation)
-        if any(k in msg_lower for k in ["trượt", "tạch", "nếu rớt", "học lại", "không qua", "ảnh hưởng"]):
+        if self._has_any(msg_lower, ["trượt", "tạch", "nếu rớt", "học lại", "không qua", "ảnh hưởng"]):
             if detected_codes:
                 return self._handle_simulation(detected_codes[0])
 
-        # 2. Xử lý câu hỏi đề xuất môn học / gợi ý kỳ tới / định hướng chuyên sâu
-        if any(k in msg_lower for k in ["nên học", "nên đăng ký", "gợi ý", "tư vấn môn", "kỳ tới", "kỳ sau", "kỳ 7", "kỳ 8", "chọn môn", "hướng", "định hướng"]):
+        # 2. Câu nói có "kỳ tới" nhưng nêu rõ môn và hỏi
+        # "cần gì/học trước" là kiểm tra điều kiện, không phải gợi ý môn.
+        course_condition_terms = [
+            "học được không", "đăng ký được", "cùng lúc",
+            "đồng thời", "tiên quyết", "song hành", "cần môn", "cần học",
+            "học trước", "cần những gì", "cần những môn", "môn gì trước", "cần gì",
+        ]
+        if detected_codes and self._has_any(msg_lower, course_condition_terms):
+            return self._handle_course_check(detected_codes, effective_message)
+
+        # 3. Xử lý câu hỏi đề xuất môn học / gợi ý kỳ tới / định hướng chuyên sâu
+        if self._has_any(msg_lower, ["nên học", "nên đăng ký", "gợi ý", "tư vấn môn", "kỳ tới", "kỳ sau", "kỳ 7", "kỳ 8", "chọn môn", "định hướng", "theo hướng", "chọn hướng", "hướng nào", "hướng chuyên"]):
             target_track = None
-            if any(k in msg_lower for k in ["vi mạch", "bán dẫn", "ic", "vlsi"]):
+            if self._has_any(msg_lower, ["vi mạch", "bán dẫn", "ic", "vlsi"]):
                 target_track = "IC_DESIGN"
-            elif any(k in msg_lower for k in ["nhúng", "embedded", "iot"]):
+            elif self._has_any(msg_lower, ["nhúng", "embedded", "iot"]):
                 target_track = "EMBEDDED_IOT"
-            elif any(k in msg_lower for k in ["viễn thông", "telecom", "5g", "truyền thông"]):
+            elif self._has_any(msg_lower, ["viễn thông", "telecom", "5g", "truyền thông"]):
                 target_track = "TELECOM_NETWORK"
-            elif any(k in msg_lower for k in ["y sinh", "biomedical"]):
+            elif self._has_any(msg_lower, ["y sinh", "biomedical"]):
                 target_track = "BIOMEDICAL"
 
             return self._handle_recommendation(target_track)
 
-        # 3. Ưu tiên RAG nếu câu hỏi hỏi về Đề cương chi tiết môn học / Nội dung môn / Phần mềm, công cụ, tool thực hành
-        is_syllabus_query = any(k in msg_lower for k in [
+        # 4. Ưu tiên RAG nếu câu hỏi hỏi về Đề cương chi tiết môn học / Nội dung môn / Phần mềm, công cụ, tool thực hành
+        is_syllabus_query = self._has_any(msg_lower, [
             "nội dung", "học gì", "học những gì", "đề cương", "phần mềm", 
             "công cụ", "tool", "thực hành gì", "kiến thức", "giáo trình", 
-            "tài liệu", "dạy gì", "làm gì", "mô tả môn"
+            "tài liệu", "dạy gì", "mô tả môn"
         ])
 
-        # 4. Ưu tiên RAG nếu câu hỏi hỏi về văn bản quy chế / quy định / tín chỉ / cảnh cáo / tốt nghiệp / học cải thiện
-        is_explicit_regulation = any(k in msg_lower for k in [
+        # 5. Ưu tiên RAG nếu câu hỏi hỏi về văn bản quy chế / quy định / tín chỉ / cảnh cáo / tốt nghiệp / học cải thiện
+        is_explicit_regulation = self._has_any(msg_lower, [
             "quy chế", "quy định", "tối thiểu", "tối đa", "bao nhiêu tín chỉ", "giới hạn tín chỉ",
-            "học bổng", "cảnh cáo", "buộc thôi học", "rút học phần", "điểm w", "thủ tục", 
+            "học bổng", "cảnh cáo", "cảnh báo học tập", "buộc thôi học", "rút học phần", "điểm w", "thủ tục", 
             "chuẩn ngoại ngữ", "chuẩn tiếng anh", "toeic", "ielts", "vstep", "học phí", 
             "bảo lưu", "chính sách", "nhận đồ án", "làm đồ án tốt nghiệp", "xét tốt nghiệp", 
             "điều kiện tốt nghiệp", "cải thiện điểm", "học lại", "thang điểm", "điều 1", "điều 2",
@@ -259,20 +342,20 @@ class ChatbotService:
         if is_syllabus_query or is_explicit_regulation:
             return self._handle_rag_query(effective_message, history, detected_codes=detected_codes if is_syllabus_query else None)
 
-        # 5. Xử lý câu hỏi về tiến độ học tập cá nhân / Degree Audit / CPA / Bằng Khá / Cải thiện điểm
-        if any(k in msg_lower for k in ["tiến độ", "còn thiếu", "tích lũy", "cpa", "gpa", "bảng điểm", "bằng khá", "bằng giỏi", "nợ môn", "kéo điểm", "cải thiện"]):
+        # 6. Xử lý câu hỏi về tiến độ học tập cá nhân / Degree Audit / CPA / Bằng Khá / Cải thiện điểm
+        if self._has_any(msg_lower, ["tiến độ", "còn thiếu", "tích lũy", "cpa", "gpa", "bảng điểm", "bằng khá", "bằng giỏi", "nợ môn", "kéo điểm", "cải thiện"]):
             return self._handle_audit()
 
-        # 6. Xử lý kiểm tra môn học cụ thể (điều kiện đăng ký, học được không, môn X cần gì)
-        is_course_question = any(k in msg_lower for k in ["điều kiện", "học được không", "được không", "đăng ký được", "cùng lúc", "đồng thời", "tiên quyết", "song hành", "môn"])
+        # 7. Xử lý kiểm tra môn học cụ thể (điều kiện đăng ký, học được không, môn X cần gì)
+        is_course_question = self._has_any(msg_lower, ["điều kiện", "học được không", "được không", "đăng ký được", "cùng lúc", "đồng thời", "tiên quyết", "song hành", "môn"])
         if detected_codes and (is_course_question or len(detected_codes) >= 2 or re.search(r'\b[A-Z]{2,3}\s*\d{4}[A-Z]?\b', message.upper())):
             return self._handle_course_check(detected_codes, effective_message)
 
-        # 7. Câu hỏi chào hỏi thông thường
-        if any(msg_lower.strip() == k for k in ["chào", "chào bạn", "hello", "hi", "alo", "menu", "help", "bạn là ai"]):
+        # 8. Câu hỏi chào hỏi thông thường / giới thiệu bản thân
+        if self._is_greeting_or_intro(effective_message, detected_codes):
             return self._handle_general_query(message)
 
-        # 8. RAG (Retrieval-Augmented Generation) cho các câu hỏi tổng quát về CTĐT và Quy chế
+        # 9. RAG (Retrieval-Augmented Generation) cho các câu hỏi tổng quát về CTĐT và Quy chế
         return self._handle_rag_query(effective_message, history)
 
     def _handle_rag_query(self, message: str, history: Optional[List[Dict[str, str]]] = None, detected_codes: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -280,7 +363,14 @@ class ChatbotService:
         Truy vấn kiến thức CTĐT và Quy chế đào tạo HUST qua RAG + Gemini LLM.
         Nếu sinh viên hỏi về một môn cụ thể, kết hợp thêm kiểm tra điều kiện cá nhân.
         """
-        rag_res = rag_engine.query(message, k=4, history=history)
+        try:
+            rag_res = rag_engine.query(message, k=4, history=history)
+        except Exception as e:
+            # Lỗi kho vector (vd. chỉ mục ChromaDB hỏng) không được làm sập
+            # /api/chat: phản hồi 500 thiếu header CORS khiến trình duyệt báo
+            # nhầm là mất kết nối backend.
+            print(f"[ChatbotService] RAG không khả dụng: {e!r}")
+            return self._rag_unavailable_reply()
         reply = rag_res["reply"]
 
         # Nếu hỏi về môn học cụ thể, đối chiếu thêm với tiến độ sinh viên
@@ -327,6 +417,26 @@ class ChatbotService:
                 "retrieved_chunks": rag_res.get("retrieved_chunks", []),
                 "context_chunks_count": rag_res.get("context_chunks_count", 0)
             }
+        }
+
+    @staticmethod
+    def _rag_unavailable_reply() -> Dict[str, Any]:
+        return {
+            "reply": (
+                "⚠️ Kho tài liệu quy chế đang gặp sự cố nên mình chưa tra cứu được câu này. "
+                "Bạn thử lại sau ít phút, hoặc xem trực tiếp trên ctt.hust.edu.vn.\n\n"
+                "Các chức năng dựa trên CTĐT vẫn dùng bình thường: kiểm tra điều kiện học phần, "
+                "gợi ý môn kỳ tới và rà soát tiến độ học tập."
+            ),
+            "intent": "RAG_HUST_KNOWLEDGE",
+            "suggested_actions": [
+                "Xem tiến độ học tập",
+                "Gợi ý môn học kỳ tới",
+                "Điều kiện môn Mạng máy tính",
+            ],
+            "sources": [],
+            "model_used": "rag-unavailable",
+            "data_context": {"retrieved_chunks": [], "context_chunks_count": 0},
         }
 
     @staticmethod
@@ -387,26 +497,6 @@ class ChatbotService:
             results.append(res)
 
         reply_lines = []
-        # Case đặc biệt: Đồ án 1 và 2 cùng lúc
-        if is_concurrent_question and set(codes) == {"ET3290", "ET4010"}:
-            reply_lines.append("🎓 **Về việc đăng ký Đồ án thiết kế I (ET3290) và Đồ án thiết kế II (ET4010) cùng lúc:**\n")
-            reply_lines.append("👉 **Kết luận: Hoàn toàn ĐƯỢC PHÉP bạn nhé!**\n")
-            reply_lines.append("Chi tiết quy định trên hệ thống CTT Bách Khoa:")
-            reply_lines.append("- Môn **ET4010 (Đồ án thiết kế II)**: Cột HP điều kiện là **RỖNG** (không có tiên quyết).")
-            reply_lines.append("- Môn **ET3290 (Đồ án thiết kế I)**: Chỉ yêu cầu điều kiện song hành `=`: `ET3260=` (học song hành với Kỹ thuật phần mềm ứng dụng).")
-            reply_lines.append("- Vì vậy bạn hoàn toàn có thể đăng ký cả 2 đồ án này trong cùng một học kỳ.")
-            
-            return {
-                "reply": "\n".join(reply_lines),
-                "intent": "COURSE_ELIGIBILITY_CHECK",
-                "suggested_actions": [
-                    "Gợi ý môn học kỳ tiếp theo",
-                    "Xem tiến độ học tập Degree Audit",
-                    "Kiểm tra môn khác"
-                ],
-                "data_context": {"check_results": results}
-            }
-
         # Kiểm tra chi tiết từng môn
         if len(codes) == 1:
             r = results[0]
@@ -518,6 +608,19 @@ class ChatbotService:
         else:
             # Nhiều môn cùng lúc
             reply_lines.append(f"🔍 **Kết quả kiểm tra điều kiện học phần cho {len(codes)} môn ({', '.join(codes)}):**\n")
+            if is_concurrent_question:
+                # Kết luận suy ra từ kết quả Rule Engine của chính hồ sơ này,
+                # không viết cứng cho từng cặp môn.
+                blocked = [r["course_code"] for r in results if not r["is_eligible"]]
+                if blocked:
+                    reply_lines.append(
+                        f"👉 **Kết luận: CHƯA ĐĂNG KÝ ĐƯỢC cùng kỳ** — đang bị chặn: {', '.join(blocked)}.\n"
+                    )
+                else:
+                    reply_lines.append(
+                        "👉 **Kết luận: ĐƯỢC PHÉP đăng ký các môn này trong cùng một học kỳ** "
+                        "(đã tính cả điều kiện song hành giữa các môn).\n"
+                    )
             for r in results:
                 status_icon = "✅" if r["is_eligible"] else "❌"
                 status_text = "Đủ điều kiện" if r["is_eligible"] else "Đang bị chặn"
@@ -582,7 +685,8 @@ class ChatbotService:
             f"- **Chương trình:** {info.get('program_name', 'Chương trình đang hoạt động')}",
             f"- **Điểm CPA hiện tại:** `{audit['cpa']:.2f}` / 4.0",
             f"- **Xếp loại học lực hiện tại:** **{classification.get('rank', 'Trung bình')}** ({classification.get('desc', 'Đạt chuẩn tốt nghiệp')})",
-            f"- **Tình trạng học tập:** {audit['warning_description']} (Giới hạn đăng ký: {audit['credit_limit']['max']} TC/kỳ)",
+            f"- **Tình trạng học tập:** {audit['warning_description']} (Giới hạn đăng ký: {audit['credit_limit']['max']} TC/kỳ chính)",
+            f"  - *Căn cứ:* {audit.get('warning_basis', '')}",
             f"- **Tín chỉ tích lũy:** `{audit['total_credits_accumulated']:.1f}` / `{audit['total_credits_required']}` TC (**{audit['completion_percentage']}%** hoàn thành)",
             f"- **Số môn đã qua:** {audit['passed_count']} môn | **Số môn chưa đạt:** {audit['failed_count']} môn\n",
             "📌 **Các môn bắt buộc cốt lõi còn lại cần hoàn thành:**"
@@ -598,8 +702,11 @@ class ChatbotService:
 
         if audit['cpa'] < 2.50 and kha_advice:
             reply_lines.append(f"\n🎯 **Mục tiêu tốt nghiệp bằng KHÁ (CPA ≥ 2.50):**")
-            reply_lines.append(f"- Điểm CPA hiện tại là **{audit['cpa']}** (loại Trung bình). Để nâng lên loại Khá, trong {kha_advice.get('remaining_credits', 21)} TC còn lại:")
-            reply_lines.append(f"  - Nếu chỉ học môn mới: Cần đạt GPA trung bình ~**{kha_advice.get('gpa_needed_remaining', 3.71)}** (toàn bộ A/B+).")
+            reply_lines.append(f"- Điểm CPA hiện tại là **{audit['cpa']}** (loại {classification.get('rank', 'Trung bình')}). Trong {kha_advice.get('remaining_credits', 0):g} TC còn lại:")
+            if kha_advice.get("is_achievable"):
+                reply_lines.append(f"  - Nếu chỉ học môn mới: Cần đạt GPA trung bình ~**{kha_advice.get('gpa_needed_remaining')}** cho phần còn lại.")
+            else:
+                reply_lines.append("  - Chỉ học các môn mới thì **không đủ** để đạt CPA 2.50 (cần GPA > 4.0).")
             reply_lines.append(f"  - **Giải pháp dễ hơn nhiều:** Đăng ký học **cải thiện điểm** 1 - 2 môn điểm D/D+ (Giải tích, Đại số, Vật lý, Điện tử số...) để nâng điểm kéo CPA lên ≥ 2.50!")
 
         return {

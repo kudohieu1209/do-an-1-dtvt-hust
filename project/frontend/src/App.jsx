@@ -1,11 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Menu, 
   Sparkles, 
-  ChevronLeft, 
-  Plus, 
-  Settings, 
-  ChevronDown,
   MoreHorizontal,
   Pin,
   Archive,
@@ -15,12 +11,13 @@ import {
   ChevronRight
 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
+import BrandLogo from './components/BrandLogo';
 import ChatTab from './components/ChatTab';
 import AuditTab from './components/AuditTab';
 import RecommendTab from './components/RecommendTab';
 import SettingsModal from './components/SettingsModal';
 import ProfileModal from './components/ProfileModal';
-import AuthModal from './components/AuthModal';
+import { apiUrl } from './api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('chat');
@@ -34,9 +31,9 @@ export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('hust_advisor_theme') || 'dark');
   const [language, setLanguage] = useState(() => localStorage.getItem('hust_advisor_lang') || 'vi');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState('general');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileModalTab, setProfileModalTab] = useState('demo');
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // ChatGPT 3-Dots Menu & Pin / Archive States
   const [isChatMenuOpen, setIsChatMenuOpen] = useState(false);
@@ -85,8 +82,8 @@ export default function App() {
   const fetchInitialData = async () => {
     try {
       const [resProfile, resAudit] = await Promise.all([
-        fetch('http://localhost:8000/api/student/profile'),
-        fetch('http://localhost:8000/api/student/audit')
+        fetch(apiUrl('/api/student/profile')),
+        fetch(apiUrl('/api/student/audit'))
       ]);
 
       if (resProfile.ok) {
@@ -107,7 +104,7 @@ export default function App() {
   const refreshConversations = async (studentId = studentProfile?.info?.student_id) => {
     if (!studentId) return;
     try {
-      const res = await fetch('http://localhost:8000/api/conversations', {
+      const res = await fetch(apiUrl('/api/conversations'), {
         headers: { 'X-Student-ID': studentId }
       });
       if (res.ok) {
@@ -163,21 +160,21 @@ export default function App() {
     try {
       if (action === 'pin') {
         const nextPinned = !isChatPinned;
-        const res = await fetch(`http://localhost:8000/api/conversations/${activeConversationId}`, {
+        const res = await fetch(apiUrl(`/api/conversations/${activeConversationId}`), {
           method: 'PATCH', headers, body: JSON.stringify({ is_pinned: nextPinned })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         setIsChatPinned(nextPinned);
         showToast(nextPinned ? (language === 'vi' ? 'Đã ghim đoạn chat' : 'Chat pinned') : (language === 'vi' ? 'Đã bỏ ghim đoạn chat' : 'Chat unpinned'));
       } else if (action === 'archive') {
-        const res = await fetch(`http://localhost:8000/api/conversations/${activeConversationId}`, {
+        const res = await fetch(apiUrl(`/api/conversations/${activeConversationId}`), {
           method: 'PATCH', headers, body: JSON.stringify({ is_archived: true })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         handleNewChat();
         showToast(language === 'vi' ? 'Đã lưu trữ đoạn chat' : 'Chat archived');
       } else if (action === 'delete') {
-        const res = await fetch(`http://localhost:8000/api/conversations/${activeConversationId}`, {
+        const res = await fetch(apiUrl(`/api/conversations/${activeConversationId}`), {
           method: 'DELETE', headers
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -196,18 +193,22 @@ export default function App() {
     setIsProfileModalOpen(true);
   };
 
+  // Ổn định tham chiếu: SettingsModal gắn/gỡ listener Esc theo onClose.
+  const handleCloseSettings = useCallback(() => setIsSettingsOpen(false), []);
+
+  const handleOpenSettings = (tab = 'general') => {
+    setSettingsTab(tab);
+    setIsSettingsOpen(true);
+  };
+
+  const handleProfileUpdated = (data) => {
+    if (data.profile) setStudentProfile(data.profile);
+    if (data.audit) setAuditData(data.audit);
+  };
+
   const handleOpenProfileModal = () => {
     setProfileModalTab('demo');
     setIsProfileModalOpen(true);
-  };
-
-  const handleAuthSuccess = async (user) => {
-    await fetchInitialData();
-    // If the newly registered or logged in user has 0 passed courses, automatically prompt transcript import
-    if (!user.passed_courses || user.passed_courses.length === 0) {
-      setProfileModalTab('import');
-      setIsProfileModalOpen(true);
-    }
   };
 
   return (
@@ -224,9 +225,11 @@ export default function App() {
         activeConversationId={activeConversationId}
         onNewChat={handleNewChat}
         onSelectConversation={handleSelectConversation}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={handleOpenSettings}
         onOpenProfileModal={handleOpenProfileModal}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onOpenImport={handleOpenImport}
+        theme={theme}
+        onToggleTheme={() => setTheme(current => (current === 'light' ? 'dark' : 'light'))}
         language={language}
       />
 
@@ -282,6 +285,7 @@ export default function App() {
                 <Menu size={18} />
               </button>
             )}
+            {!isSidebarOpen && <BrandLogo size={28} />}
 
           </div>
 
@@ -389,7 +393,7 @@ export default function App() {
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--sidebar-hover)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <Pin size={16} color={isChatPinned ? '#c8102e' : 'var(--text-muted)'} />
+                  <Pin size={16} color={isChatPinned ? 'var(--brand-accent)' : 'var(--text-muted)'} />
                   <span>
                     {isChatPinned 
                       ? (language === 'vi' ? 'Bỏ ghim đoạn chat' : 'Unpin chat') 
@@ -440,7 +444,7 @@ export default function App() {
                     borderRadius: '8px',
                     border: 'none',
                     background: 'transparent',
-                    color: '#ef4444',
+                    color: 'var(--danger)',
                     fontSize: '0.85rem',
                     fontWeight: '500',
                     cursor: 'pointer',
@@ -451,7 +455,7 @@ export default function App() {
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <Trash2 size={16} color="#ef4444" />
+                  <Trash2 size={16} color="var(--danger)" />
                   <span>{language === 'vi' ? 'Xóa' : 'Delete'}</span>
                 </button>
 
@@ -494,7 +498,7 @@ export default function App() {
         {/* Apple Dynamic Island Toast Notification */}
         {toastMessage && (
           <div className="apple-dynamic-island">
-            <Sparkles size={14} color="#10b981" />
+            <Sparkles size={14} color="var(--success)" />
             <span>{toastMessage}</span>
           </div>
         )}
@@ -513,7 +517,7 @@ export default function App() {
                 onConversationUpdated={() => refreshConversations()}
                 onOpenImport={handleOpenImport}
                 onOpenProfileModal={handleOpenProfileModal}
-                onOpenAuthModal={() => setIsAuthModalOpen(true)}
+                onOpenAuthModal={handleOpenProfileModal}
                 language={language}
               />
             )}
@@ -532,7 +536,7 @@ export default function App() {
                     onNavigateTab={setActiveTab}
                     onOpenImport={handleOpenImport}
                     onOpenProfileModal={handleOpenProfileModal}
-                    onOpenAuthModal={() => setIsAuthModalOpen(true)}
+                    onOpenAuthModal={handleOpenProfileModal}
                   />
                 )}
 
@@ -548,17 +552,19 @@ export default function App() {
       {/* 3. Settings Dialog Modal */}
       <SettingsModal 
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={handleCloseSettings}
+        initialTab={settingsTab}
         theme={theme}
         setTheme={setTheme}
         language={language}
         setLanguage={setLanguage}
         studentProfile={studentProfile}
-        setStudentProfile={setStudentProfile}
         auditData={auditData}
-        setAuditData={setAuditData}
-        onResetChat={handleNewChat}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onProfileUpdated={handleProfileUpdated}
+        onSwitchProfile={() => {
+          setIsSettingsOpen(false);
+          handleOpenProfileModal();
+        }}
         onShowToast={showToast}
       />
 
@@ -573,14 +579,6 @@ export default function App() {
           if (data.profile) setStudentProfile(data.profile);
           if (data.audit) setAuditData(data.audit);
         }}
-        language={language}
-      />
-
-      {/* 5. Student Login & Register Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onAuthSuccess={handleAuthSuccess}
         language={language}
       />
     </div>
