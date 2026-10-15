@@ -29,8 +29,13 @@ API_PORT = int(os.getenv("API_PORT", 8000))
 # Cấu hình Gemini LLM
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-GEMINI_FALLBACK_MODEL = "gemini-1.5-flash"
-GEMINI_EMBEDDING_MODEL = "text-embedding-004"
+# gemini-1.5-* đã bị Google ngừng hỗ trợ; dùng bản lite cùng thế hệ làm dự phòng.
+GEMINI_FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash-lite")
+GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
+# auto: dùng Gemini embedding khi có API key, ngược lại dùng embedding mặc định của ChromaDB.
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "auto").lower()
+# auto/llm: Gemini phân loại intent (lỗi thì về luật từ khóa); keyword: chỉ dùng luật từ khóa.
+INTENT_ROUTER_MODE = os.getenv("INTENT_ROUTER_MODE", "auto").lower()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 

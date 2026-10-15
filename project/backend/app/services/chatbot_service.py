@@ -8,6 +8,8 @@ from app.engine.graph_engine import graph_engine
 from app.engine.recommender import course_recommender
 from app.core.config import GEMINI_API_KEY, OPENAI_API_KEY
 from app.rag.rag_engine import rag_engine
+from app.rag.gemini_service import gemini_service
+from app.services import intent_router
 
 # Bảng từ đồng nghĩa / tên gọi phổ biến của sinh viên Bách Khoa
 COURSE_ALIASES = {
@@ -110,6 +112,7 @@ class ChatbotService:
     def __init__(self):
         self.gemini_key = GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")
         self.openai_key = OPENAI_API_KEY or os.getenv("OPENAI_API_KEY", "")
+        self.router = intent_router.IntentRouter(gemini=gemini_service)
 
     @staticmethod
     def _is_repeat_request(message: str) -> bool:
@@ -205,8 +208,8 @@ class ChatbotService:
     def process_message(self, message: str, history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
         """
         Xử lý tin nhắn của sinh viên theo kiến trúc Hybrid Agent:
-        1. Phân loại Intent (Simulation, Recommendation, Degree Audit, Course Eligibility)
-        2. Nếu là câu hỏi quy chế, chính sách, thủ tục, học bổng -> Kích hoạt RAG Engine + Gemini LLM
+        1. Phân loại Intent bằng IntentRouter (Gemini structured output, dự phòng luật từ khóa)
+        2. Câu hỏi về dữ liệu cố định -> Rule/Graph Engine; quy chế, đề cương -> RAG + Gemini
         3. Tổng hợp câu trả lời tự nhiên, chính xác kèm trích dẫn văn bản quy chế HUST.
         """
         # Một số câu follow-up chỉ có ý nghĩa khi đọc cùng lịch sử, ví dụ
@@ -218,62 +221,34 @@ class ChatbotService:
             if previous_question:
                 effective_message = previous_question
 
-        msg_lower = effective_message.lower()
         detected_codes = self._detect_courses(effective_message)
+        decision = self.router.route(
+            effective_message,
+            detected_codes,
+            data_loader.get_all_courses(),
+            history=history,
+        )
+        print(f"[ChatbotService] Intent {decision.intent} ({decision.router}), môn: {decision.course_codes}")
+        codes = decision.course_codes
 
-        # 1. Xử lý câu hỏi mô phỏng trượt môn (What-if simulation)
-        if any(k in msg_lower for k in ["trượt", "tạch", "nếu rớt", "học lại", "không qua", "ảnh hưởng"]):
-            if detected_codes:
-                return self._handle_simulation(detected_codes[0])
+        if decision.intent == intent_router.SIMULATION and codes:
+            response = self._handle_simulation(codes[0])
+        elif decision.intent == intent_router.RECOMMENDATION:
+            response = self._handle_recommendation(decision.track)
+        elif decision.intent == intent_router.SYLLABUS:
+            response = self._handle_rag_query(effective_message, history, detected_codes=codes)
+        elif decision.intent == intent_router.AUDIT:
+            response = self._handle_audit()
+        elif decision.intent == intent_router.COURSE_CHECK and codes:
+            response = self._handle_course_check(codes, effective_message)
+        elif decision.intent == intent_router.GREETING:
+            response = self._handle_general_query(message)
+        else:
+            # Quy chế và câu hỏi tổng quát về CTĐT/trường đều đi qua RAG + Gemini.
+            response = self._handle_rag_query(effective_message, history)
 
-        # 2. Xử lý câu hỏi đề xuất môn học / gợi ý kỳ tới / định hướng chuyên sâu
-        if any(k in msg_lower for k in ["nên học", "nên đăng ký", "gợi ý", "tư vấn môn", "kỳ tới", "kỳ sau", "kỳ 7", "kỳ 8", "chọn môn", "hướng", "định hướng"]):
-            target_track = None
-            if any(k in msg_lower for k in ["vi mạch", "bán dẫn", "ic", "vlsi"]):
-                target_track = "IC_DESIGN"
-            elif any(k in msg_lower for k in ["nhúng", "embedded", "iot"]):
-                target_track = "EMBEDDED_IOT"
-            elif any(k in msg_lower for k in ["viễn thông", "telecom", "5g", "truyền thông"]):
-                target_track = "TELECOM_NETWORK"
-            elif any(k in msg_lower for k in ["y sinh", "biomedical"]):
-                target_track = "BIOMEDICAL"
-
-            return self._handle_recommendation(target_track)
-
-        # 3. Ưu tiên RAG nếu câu hỏi hỏi về Đề cương chi tiết môn học / Nội dung môn / Phần mềm, công cụ, tool thực hành
-        is_syllabus_query = any(k in msg_lower for k in [
-            "nội dung", "học gì", "học những gì", "đề cương", "phần mềm", 
-            "công cụ", "tool", "thực hành gì", "kiến thức", "giáo trình", 
-            "tài liệu", "dạy gì", "làm gì", "mô tả môn"
-        ])
-
-        # 4. Ưu tiên RAG nếu câu hỏi hỏi về văn bản quy chế / quy định / tín chỉ / cảnh cáo / tốt nghiệp / học cải thiện
-        is_explicit_regulation = any(k in msg_lower for k in [
-            "quy chế", "quy định", "tối thiểu", "tối đa", "bao nhiêu tín chỉ", "giới hạn tín chỉ",
-            "học bổng", "cảnh cáo", "buộc thôi học", "rút học phần", "điểm w", "thủ tục", 
-            "chuẩn ngoại ngữ", "chuẩn tiếng anh", "toeic", "ielts", "vstep", "học phí", 
-            "bảo lưu", "chính sách", "nhận đồ án", "làm đồ án tốt nghiệp", "xét tốt nghiệp", 
-            "điều kiện tốt nghiệp", "cải thiện điểm", "học lại", "thang điểm", "điều 1", "điều 2",
-            "điều 3", "điều 4", "điều 5", "điều 6", "điều 7", "điều 8", "điều 9", "điều 10"
-        ])
-        if is_syllabus_query or is_explicit_regulation:
-            return self._handle_rag_query(effective_message, history, detected_codes=detected_codes if is_syllabus_query else None)
-
-        # 5. Xử lý câu hỏi về tiến độ học tập cá nhân / Degree Audit / CPA / Bằng Khá / Cải thiện điểm
-        if any(k in msg_lower for k in ["tiến độ", "còn thiếu", "tích lũy", "cpa", "gpa", "bảng điểm", "bằng khá", "bằng giỏi", "nợ môn", "kéo điểm", "cải thiện"]):
-            return self._handle_audit()
-
-        # 6. Xử lý kiểm tra môn học cụ thể (điều kiện đăng ký, học được không, môn X cần gì)
-        is_course_question = any(k in msg_lower for k in ["điều kiện", "học được không", "được không", "đăng ký được", "cùng lúc", "đồng thời", "tiên quyết", "song hành", "môn"])
-        if detected_codes and (is_course_question or len(detected_codes) >= 2 or re.search(r'\b[A-Z]{2,3}\s*\d{4}[A-Z]?\b', message.upper())):
-            return self._handle_course_check(detected_codes, effective_message)
-
-        # 7. Câu hỏi chào hỏi thông thường
-        if any(msg_lower.strip() == k for k in ["chào", "chào bạn", "hello", "hi", "alo", "menu", "help", "bạn là ai"]):
-            return self._handle_general_query(message)
-
-        # 8. RAG (Retrieval-Augmented Generation) cho các câu hỏi tổng quát về CTĐT và Quy chế
-        return self._handle_rag_query(effective_message, history)
+        response["router"] = decision.router
+        return response
 
     def _handle_rag_query(self, message: str, history: Optional[List[Dict[str, str]]] = None, detected_codes: Optional[List[str]] = None) -> Dict[str, Any]:
         """

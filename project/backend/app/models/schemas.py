@@ -125,6 +125,8 @@ class ChatResponse(BaseModel):
     data_context: Optional[Dict[str, Any]] = None
     sources: Optional[List[Dict[str, str]]] = []
     model_used: Optional[str] = None
+    # "llm" nếu Gemini phân loại intent, "keyword" nếu dùng luật từ khóa dự phòng.
+    router: Optional[str] = None
 
 class ConversationCreateRequest(BaseModel):
     title: Optional[str] = None

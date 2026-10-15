@@ -61,6 +61,27 @@ cd project/backend
 ./venv/bin/python test_backend.py
 ```
 
+Đánh giá bộ định tuyến intent và chất lượng truy xuất RAG (đo thêm router
+LLM và Gemini embedding khi có `GEMINI_API_KEY`):
+
+```bash
+cd project/backend
+./venv/bin/python eval/run_eval.py
+```
+
+### Tầng AI (Hybrid Agent)
+
+- **Định tuyến intent:** Gemini đọc câu hỏi, lịch sử ngắn và danh mục học phần
+  của CTĐT đang hoạt động, rồi trả về JSON có cấu trúc (intent, mã học phần,
+  định hướng). Nhờ đó hiểu được cách nói tự nhiên và câu follow-up. Khi chưa có
+  API key hoặc khi API lỗi, hệ thống quay về luật từ khóa
+  (`app/services/intent_router.py`). LLM chỉ chọn công cụ; mọi phép tính vẫn
+  do Rule Engine thực hiện.
+- **Truy xuất RAG:** tìm kiếm lai gồm khớp chính xác mã môn/Điều, vector
+  embedding (Gemini `gemini-embedding-001` đa ngôn ngữ khi có key) và BM25
+  theo từ khóa tiếng Việt, hợp nhất bằng Reciprocal Rank Fusion.
+- **Sinh câu trả lời:** `gemini-2.5-flash`, dự phòng `gemini-2.5-flash-lite`.
+
 Danh mục chương trình có thể xem qua `GET /api/programs` (lọc bằng `?search=`
 hoặc chỉ chương trình đã có CTĐT bằng `?supported_only=true`).
 

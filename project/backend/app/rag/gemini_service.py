@@ -2,7 +2,12 @@ import os
 from typing import List, Dict, Any, Optional
 from google import genai
 from google.genai import types
-from app.core.config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_FALLBACK_MODEL
+from app.core.config import (
+    GEMINI_API_KEY,
+    GEMINI_EMBEDDING_MODEL,
+    GEMINI_FALLBACK_MODEL,
+    GEMINI_MODEL,
+)
 
 HUST_SYSTEM_PROMPT = """Bạn là Trợ lý Cố vấn Học tập & Đào tạo thông minh của Đại học Bách Khoa Hà Nội (HUST Academic Advisor AI).
 Nhiệm vụ của bạn là tư vấn chính xác, tận tâm và chuyên nghiệp cho sinh viên Bách Khoa trên toàn trường về:
@@ -44,6 +49,7 @@ class GeminiService:
         self.api_key = GEMINI_API_KEY
         self.model_name = GEMINI_MODEL
         self.fallback_model = GEMINI_FALLBACK_MODEL
+        self.embedding_model = GEMINI_EMBEDDING_MODEL
         self.client: Optional[genai.Client] = None
         self._init_client()
 
@@ -68,6 +74,58 @@ class GeminiService:
 
     def is_configured(self) -> bool:
         return bool(self.client and self.api_key)
+
+    def _candidate_models(self) -> List[str]:
+        return list(dict.fromkeys(m for m in (self.model_name, self.fallback_model) if m))
+
+    def generate_json(self, prompt: str, system_instruction: str, schema: Dict[str, Any]) -> Optional[Any]:
+        """Gọi Gemini với structured output; trả về dict đã parse hoặc None nếu lỗi."""
+        if not self.is_configured():
+            return None
+        for model in self._candidate_models():
+            try:
+                response = self.client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0,
+                        max_output_tokens=256,
+                        response_mime_type="application/json",
+                        response_schema=schema,
+                        # Phân loại không cần suy luận dài; tắt thinking để giảm độ trễ.
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    ),
+                )
+                if response is not None:
+                    if getattr(response, "parsed", None) is not None:
+                        return response.parsed
+                    if response.text:
+                        return response.text
+            except Exception as e:
+                print(f"[GeminiService] Phân loại bằng model {model} thất bại: {e}")
+        return None
+
+    def embed_texts(self, texts: List[str], task_type: str) -> List[List[float]]:
+        """Tạo embedding đa ngôn ngữ (hỗ trợ tiếng Việt) bằng Gemini.
+
+        task_type: RETRIEVAL_DOCUMENT khi index tài liệu, RETRIEVAL_QUERY khi truy vấn.
+        Ném exception nếu lỗi để Vector Store tự quay về embedding mặc định.
+        """
+        if not self.is_configured():
+            raise RuntimeError("Gemini chưa được cấu hình API key.")
+        vectors: List[List[float]] = []
+        batch_size = 100
+        for i in range(0, len(texts), batch_size):
+            result = self.client.models.embed_content(
+                model=self.embedding_model,
+                contents=texts[i:i + batch_size],
+                config=types.EmbedContentConfig(task_type=task_type),
+            )
+            vectors.extend(list(e.values) for e in result.embeddings)
+        if len(vectors) != len(texts):
+            raise RuntimeError("Số embedding trả về không khớp số văn bản.")
+        return vectors
 
     def generate_response(
         self,
@@ -119,7 +177,7 @@ class GeminiService:
         full_prompt = "\n".join(prompt_parts)
 
         # Gọi Gemini API
-        for model in [self.model_name, self.fallback_model, "gemini-1.5-flash"]:
+        for model in self._candidate_models():
             try:
                 response = self.client.models.generate_content(
                     model=model,
