@@ -1,0 +1,65 @@
+\chapter{NHẬN XÉT VÀ ĐỀ XUẤT}
+
+\section{Ưu điểm}
+
+Đề tài bám đúng chuyên ngành Kỹ thuật Điện tử Viễn thông: đọc mã linh kiện, đối
+chiếu datasheet và xem thiết bị tự động hóa được chọn như thế nào trong một
+doanh nghiệp cung ứng thật. Danh mục công khai của TECHPAL đủ rộng để em không
+phải dừng ở mô tả chung, mà đi vào bốn nhóm sản phẩm và bốn mã đại diện.
+
+Việc tra cứu MAX487CSA+T, BMXAMI0410, 6ES7153-1AA03-0XB0 và CR1000X giúp em
+thấy cùng một bài toán chức năng có thể đi theo các hướng khác nhau. IC rời
+phù hợp thiết kế nhúng; mô-đun analog phải khớp rack và CPU; bộ ghi dữ liệu
+tích hợp tiện cho trạm đo độc lập. Trường hợp Siemens phân loại
+6ES7153-1AA03-0XB0 là phụ tùng là ví dụ rõ nhất: nếu chỉ nhìn tên chức năng
+thì dễ đề xuất sai cho dự án mới.
+
+Em cũng tập được thói quen không tin mô tả ngắn trên trang bán hàng. Bảng kiểm
+kỹ thuật (Bảng~\ref{tab:technical-checklist}) buộc phải trả lời đủ định danh,
+thông số điện, giao tiếp, cơ khí, môi trường, vòng đời và chứng từ trước khi
+chốt mã. Bài toán thu thập nhiệt độ tủ kỹ thuật dù chỉ ở mức phương án giấy
+vẫn hữu ích, vì nó buộc em đi từ yêu cầu chức năng sang kiến trúc rồi mới so
+sánh vai trò từng mã. Các kỹ năng đọc tiếng Anh chuyên ngành, ghi chép nguồn
+và trình bày phương án là phần em thấy mang sang các học phần thiết kế sau này
+được.
+
+\section{Nhược điểm}
+
+Về điều kiện thực tập, thời gian ngắn nên em chỉ kịp đi sâu một mảng cung ứng.
+Em không tiếp cận được quy trình nội bộ, dữ liệu kho hay phòng thí nghiệm, vì
+vậy Hình~\ref{fig:supply-flow} chỉ là mô hình hóa từ thông tin công khai, không
+phải luồng đang áp dụng tại công ty. Bài toán nhiệt độ cũng chưa chọn cảm biến,
+chưa có số liệu đo, chưa đánh giá được sai số, nhiễu hay độ bền khi vận hành.
+
+Về phía bản thân, danh mục công nghiệp lớn và cách đặt mã khác nhau giữa các
+hãng khiến em dễ chú ý vài thông số nổi (số kênh, điện áp) rồi bỏ sót chi tiết
+quyết định. Hậu tố ``T'' của MAX487CSA+T liên quan quy cách đóng gói tape and
+reel, không phải biến thể mạch; nếu đặt hàng thiếu hậu tố có thể nhận sai dạng
+cuộn. Với BMXAMI0410, em chưa đọc được tài liệu tương thích rack/CPU ở mức
+triển khai. Với mã Siemens, nếu không tra trạng thái vòng đời thì sẽ không biết
+sản phẩm chỉ còn dạng phụ tùng. Do đó mọi kết luận về khả năng thay thế trong
+báo cáo đều cần người có kinh nghiệm xem lại.
+
+Nhược điểm này cũng thể hiện ở cách viết: một số đoạn còn kể lại thông tin web
+nhiều hơn là phân tích quyết định kỹ thuật. Em nhận ra rằng khảo sát tài liệu
+là bước cần, nhưng chưa đủ để khẳng định một mã ``dùng được'' trong hệ thống
+cụ thể.
+
+\section{Đề xuất}
+
+Với đơn vị tiếp nhận, em đề xuất có sẵn một bộ tài liệu ngắn cho sinh viên mới:
+quy tắc đọc mã và hậu tố, mẫu so sánh thiết bị theo các cột của bảng kiểm, hướng
+dẫn chống tĩnh điện (ESD), kèm một tình huống chọn mã thật -- ví dụ một yêu cầu
+thay thế hoặc một đơn hàng đã xử lý -- để sinh viên quan sát cách Sale, Mua hàng
+Quốc tế và Logistics giữ thông tin nhất quán. Nếu điều kiện cho phép, cho sinh
+viên xem một lần kiểm tra ngoại quan hoặc đối chiếu chứng từ khi nhận hàng sẽ
+giúp nối phần đọc datasheet với công việc thực tế, dù không cần giao việc nội
+bộ.
+
+Với bản thân, em sẽ hoàn thiện bảng kiểm cho đủ bốn mã đã chọn, đặc biệt các
+cột vòng đời và tương thích hệ thống còn mỏng. Nếu có điều kiện, em muốn làm
+một nguyên mẫu nhỏ đo nhiệt độ tủ kỹ thuật để kiểm chứng phương án giấy: chọn
+cảm biến, xác định dải đo, chu kỳ lưu và cổng truyền về máy tính. Song song đó,
+em cần luyện viết ghi chú kỹ thuật ngắn hơn, tập trung vào tiêu chí chốt mã thay
+vì thuật lại toàn bộ trang sản phẩm. Những việc này sẽ giúp em chắc hơn khi học
+tiếp thiết kế mạch, hệ thống nhúng và tự động hóa.

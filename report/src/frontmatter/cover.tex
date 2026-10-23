@@ -1,0 +1,46 @@
+% Trang bìa căn theo tâm vật lý của giấy A4; phần ruột dùng hai lề bên bằng nhau.
+\newgeometry{top=2cm,bottom=2cm,left=2cm,right=2cm}
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \draw[line width=1.0pt]
+    ($(current page.north west)+(1.55cm,-1.35cm)$)
+    rectangle
+    ($(current page.south east)+(-1.55cm,1.35cm)$);
+  \draw[line width=0.4pt]
+    ($(current page.north west)+(1.63cm,-1.43cm)$)
+    rectangle
+    ($(current page.south east)+(-1.63cm,1.43cm)$);
+\end{tikzpicture}
+\begin{center}
+  {\bfseries\fontsize{21}{26}\selectfont
+  ĐẠI HỌC BÁCH KHOA HÀ NỘI\\
+  TRƯỜNG ĐIỆN -- ĐIỆN TỬ\par}
+
+  \vspace{0.15cm}
+  \rule{6cm}{0.4pt}
+
+  \vspace{0.8cm}
+  \includegraphics[height=4.8cm]{logo.png}
+
+  \vspace{0.7cm}
+  {\bfseries\fontsize{21}{26}\selectfont BÁO CÁO\\[0.25cm]
+  THỰC TẬP KỸ THUẬT\par}
+
+  \vspace{1.0cm}
+  {\bfseries\fontsize{21}{26}\selectfont\MakeUppercase{\CompanyName}\par}
+
+  \vfill
+
+  \begin{tabular}{@{}>{\bfseries}l@{\hspace{1.2em}}l@{}}
+    Giảng viên hướng dẫn: & \UniversitySupervisor \\
+    Sinh viên thực hiện: & \StudentName \\
+    MSSV: & \StudentId \\
+    Mã lớp học: & \StudentClass \\
+  \end{tabular}
+
+  \vfill
+  {\bfseries Hà Nội, 8/2026}
+\end{center}
+\end{titlepage}
+\restoregeometry

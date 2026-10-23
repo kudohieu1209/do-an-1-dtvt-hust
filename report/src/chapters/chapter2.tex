@@ -1,0 +1,348 @@
+\chapter{NỘI DUNG THỰC TẬP}
+
+\section{Phạm vi và phương pháp tìm hiểu}
+
+Trong thời gian thực tập, dưới sự hướng dẫn của anh \CompanySupervisor{}, em tập
+trung tìm hiểu hoạt động cung ứng linh kiện điện tử và thiết bị tự động hóa tại
+\CompanyName{}. Em chọn đi vào ba vấn đề chính: thứ nhất là mối liên hệ giữa các
+bộ phận tham gia chuỗi cung ứng; thứ hai là cách chuyển yêu cầu của khách hàng
+thành tiêu chí chọn thiết bị; và thứ ba là cách kiểm tra một mã hàng cụ thể bằng
+tài liệu của nhà sản xuất.
+
+Nguồn thông tin chủ yếu là website giới thiệu, trang bán hàng công khai của
+TECHPAL và tài liệu kỹ thuật (datasheet) từ các hãng sản xuất. Em chỉ sử dụng
+những gì có thể tra cứu và kiểm chứng được, còn quy trình nội bộ, dữ liệu kho
+hay kết quả đo kiểm thì em không có quyền truy cập. Các phân tích ứng dụng trong
+chương này mới ở mức phương án trên giấy, chưa phải sản phẩm đã làm ra.
+
+Em thực hiện theo bốn bước:
+
+\begin{enumerate}[label=\arabic*)]
+  \item Tìm các nhóm sản phẩm và bộ phận liên quan từ nguồn công khai;
+  \item Chọn vài mã đại diện có trong danh mục của TECHPAL;
+  \item Đối chiếu mô tả trên trang bán hàng với tài liệu chính thức của hãng;
+  \item Tổng hợp lại thành quy trình lựa chọn, kèm một bài toán minh họa.
+\end{enumerate}
+
+\section{Các vị trí liên quan trong chuỗi cung ứng}
+
+Trên trang giới thiệu của TECHPAL có đề cập đến ba bộ phận trực tiếp tham gia
+cung ứng: Sale, Mua hàng Quốc tế và Logistics. Ba bộ phận
+này phụ trách các giai đoạn khác nhau nhưng đều làm việc trên cùng một đơn hàng,
+cùng mã linh kiện, số lượng, yêu cầu chất lượng và deadline giao hàng
+\cite{techpal-about}.
+
+\begin{table}[H]
+\centering
+\caption{Vai trò của các bộ phận trong chuỗi cung ứng linh kiện}
+\label{tab:chapter2-roles}
+\small
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\textwidth}{>{\bfseries\raggedright\arraybackslash}p{3.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+Bộ phận & Nội dung công việc liên quan & Kiến thức, kỹ năng cần thiết \\
+\midrule
+Sale & Tiếp nhận nhu cầu, làm rõ mã hàng, số lượng, ứng dụng và thời hạn; trao đổi phương án với khách hàng & Giao tiếp kỹ thuật, đọc mã linh kiện, hiểu thông số cơ bản và lập báo giá \\
+Mua hàng Quốc tế & Tìm nguồn, kiểm tra khả năng cung ứng, quy cách đóng gói và chứng từ; làm việc với nhà cung cấp & Tiếng Anh chuyên ngành, tra cứu chéo, đánh giá nguồn và quản lý thay đổi sản phẩm \\
+Logistics & Theo dõi vận chuyển, tiếp nhận, bảo quản và bàn giao; kiểm tra sự phù hợp giữa hàng hóa với chứng từ & Quản lý mã hàng, đóng gói, điều kiện lưu kho, ESD và truy xuất lô hàng \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Bảng~\ref{tab:chapter2-roles} là do em tự tổng hợp theo tính chất công việc, không
+phải bản mô tả nhân sự chính thức của công ty. Tuy nhiên, một điểm em thấy rõ là
+với linh kiện điện tử, chỉ cần sai một hậu tố trong mã đặt hàng là có thể nhận
+nhầm kiểu vỏ, dải nhiệt độ hay quy cách đóng gói. Cho nên thông tin kỹ thuật
+cần phải được giữ nhất quán khi chuyển từ bộ phận này sang bộ phận khác.
+
+Từ thông tin về dịch vụ đặt hàng qua châu Âu -- Mỹ, DigiKey, Mouser và Trung
+Quốc trên trang TECHPAL \cite{techpal-about}, em vẽ lại luồng xử lý một
+yêu cầu cung ứng như Hình~\ref{fig:supply-flow}. Sơ đồ này chỉ mang tính khái
+quát để phục vụ học tập, không phải quy trình nội bộ mà công ty đang áp dụng.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  block/.style={draw, rounded corners=2pt, align=center, minimum height=1.25cm,
+                text width=2.35cm, font=\small},
+  line/.style={-{Latex[length=2.3mm]}, thick},
+  node distance=0.45cm
+]
+  \node[block] (need) {Tiếp nhận\\yêu cầu};
+  \node[block, right=of need] (normalize) {Chuẩn hóa\\mã và thông số};
+  \node[block, right=of normalize] (source) {Tìm nguồn và\\đối chiếu};
+  \node[block, right=of source] (order) {Đặt hàng,\\vận chuyển};
+  \node[block, right=of order] (deliver) {Tiếp nhận và\\bàn giao};
+  \draw[line] (need) -- (normalize);
+  \draw[line] (normalize) -- (source);
+  \draw[line] (source) -- (order);
+  \draw[line] (order) -- (deliver);
+\end{tikzpicture}
+\caption{Luồng xử lý yêu cầu cung ứng (mô hình hóa từ thông tin công khai)}
+\label{fig:supply-flow}
+\end{figure}
+
+\section{Khảo sát danh mục sản phẩm của TECHPAL}
+
+Danh mục trực tuyến của TECHPAL chia sản phẩm thành bốn nhóm lớn: linh kiện điện
+tử; thiết bị tự động hóa công nghiệp; vật tư phụ trợ công nghiệp; và thiết bị,
+vật tư phòng sạch. Cách phân nhóm này
+giúp thu hẹp phạm vi tìm kiếm, nhưng chỉ nhìn vào tên nhóm thì chưa biết được
+sản phẩm có hợp với ứng dụng cụ thể hay không \cite{techpal-components}.
+
+\begin{table}[H]
+\centering
+\caption{Các nhóm cung ứng chính trên danh mục TECHPAL}
+\label{tab:techpal-categories}
+\small
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\textwidth}{>{\bfseries\raggedright\arraybackslash}p{4.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+Nhóm cung ứng & Thành phần tiêu biểu quan sát được & Thông tin cần kiểm tra \\
+\midrule
+Linh kiện điện tử & IC, vi điều khiển, linh kiện công suất, đầu nối, rơ-le, màn hình & Mã đầy đủ, kiểu vỏ, điện áp, dòng, nhiệt độ và trạng thái vòng đời \\
+Thiết bị tự động hóa & Mô-đun PLC/I/O, cảm biến, encoder, bộ nguồn, thiết bị ghi dữ liệu & Kiến trúc hệ thống, số kênh, loại tín hiệu, giao thức và khả năng mở rộng \\
+Vật tư phụ trợ công nghiệp & Đầu nối, dây dẫn, phụ kiện lắp đặt và vật tư bảo trì & Kích thước, vật liệu, điều kiện môi trường và tương thích cơ khí \\
+Thiết bị, vật tư phòng sạch & Dụng cụ và vật tư phục vụ môi trường kiểm soát bụi bẩn & Cấp sạch, vật liệu, quy cách đóng gói và yêu cầu sử dụng \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Để không dừng lại ở mô tả chung chung, em chọn bốn mã hàng có thật trong danh
+mục TECHPAL \cite{techpal-components} để tra cứu kỹ hơn. Bốn mã này đại diện cho bốn loại thiết bị khác
+nhau: IC truyền thông, mô-đun I/O công nghiệp, thiết bị kết nối I/O phân tán và
+bộ ghi dữ liệu.
+
+\begin{table}[H]
+\centering
+\caption{Một số mã hàng đại diện trong danh mục TECHPAL}
+\label{tab:representative-products}
+\small
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\textwidth}{>{\ttfamily\raggedright\arraybackslash}p{4.1cm} >{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}X}
+\toprule
+\normalfont\textbf{Mã sản phẩm} & \textbf{Nhóm chức năng} & \textbf{Mô tả dùng cho bước tra cứu} \\
+\midrule
+MAX487CSA+T & IC truyền thông & Bộ thu phát RS-485/RS-422 công suất thấp, vỏ SOIC 8 chân \\
+BMXAMI0410 & Mô-đun vào tương tự & Mô-đun Modicon X80 có bốn ngõ vào tương tự tốc độ cao \\
+6ES7153-1AA03-0XB0 & Giao tiếp I/O phân tán & Mô-đun kết nối SIMATIC DP IM 153-1 cho ET 200M \\
+CR1000X & Đo lường và lưu trữ & Bộ ghi dữ liệu có khả năng đo, xử lý, lưu trữ và truyền thông \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Quy trình đọc và lựa chọn thiết bị}
+
+\subsection{Chuẩn hóa yêu cầu đầu vào}
+
+Nếu khách hàng chỉ nói ``cần IC RS-485'' hay ``cần mô-đun analog'' thì chưa đủ
+thông tin để đặt hàng. Yêu cầu như vậy cần được cụ thể hóa thành: chức năng gì,
+điện áp bao nhiêu, mấy kênh, loại tín hiệu, tốc độ, giao thức, nhiệt độ làm
+việc, kiểu lắp, số lượng và khi nào cần. Nếu đây là mã thay thế cho linh kiện
+cũ thì phải có thêm mã gốc và thông tin về bo mạch đang sử dụng.
+
+\subsection{Kiểm tra mã và tài liệu kỹ thuật}
+
+Mã hàng cần đọc đầy đủ kể cả hậu tố -- điểm này ban đầu em cũng hay bỏ qua.
+Để xác nhận thông số, nguồn đáng tin nhất là trang sản phẩm và datasheet của nhà
+sản xuất. Mô tả trên website nhà cung ứng giúp định vị nhanh sản phẩm, nhưng
+không nên dựa vào đó để kết luận tương thích hay không. Các bước kiểm tra em đề
+xuất gồm:
+
+\begin{enumerate}[label=\arabic*)]
+  \item Xác nhận nhà sản xuất và mã đặt hàng đầy đủ;
+  \item Đối chiếu chức năng, sơ đồ chân hoặc kiến trúc mô-đun;
+  \item Kiểm tra giới hạn điện, nhiệt và điều kiện làm việc khuyến nghị;
+  \item Xem kiểu vỏ, kích thước, đầu nối và cách lắp đặt;
+  \item Xác định trạng thái vòng đời: còn sản xuất hay chỉ còn dạng phụ tùng;
+  \item Lưu lại link tài liệu, ngày tra cứu và kết luận.
+\end{enumerate}
+
+Kết quả tra cứu nên ghi lại dưới dạng bảng kiểm để sau này người khác có thể
+xem lại được nguồn dữ liệu và lý do chọn. Bảng~\ref{tab:technical-checklist}
+liệt kê những câu hỏi tối thiểu cần trả lời trước khi đề xuất mua một mã hàng.
+
+\begin{table}[H]
+\centering
+\caption{Bảng kiểm kỹ thuật trước khi lựa chọn mã hàng}
+\label{tab:technical-checklist}
+\footnotesize
+\renewcommand{\arraystretch}{1.0}
+\begin{tabularx}{\textwidth}{>{\bfseries\raggedright\arraybackslash}p{3.4cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+Nội dung kiểm tra & Câu hỏi cần trả lời & Rủi ro nếu bỏ sót \\
+\midrule
+Định danh & Mã, hậu tố và hãng đã chính xác chưa? & Nhận sai biến thể hoặc sai quy cách đóng gói \\
+Thông số điện & Điện áp, dòng, mức logic và công suất có phù hợp? & Hỏng linh kiện hoặc hệ thống hoạt động không ổn định \\
+Giao tiếp & Chuẩn vật lý, giao thức và tốc độ có tương thích? & Không trao đổi được dữ liệu \\
+Cơ khí & Vỏ, chân, đầu nối và kích thước lắp có khớp? & Không lắp được hoặc phải sửa thiết kế \\
+Môi trường & Nhiệt độ, độ ẩm, rung và cấp bảo vệ có đáp ứng? & Suy giảm độ tin cậy khi vận hành \\
+Vòng đời & Sản phẩm còn sản xuất hay chỉ còn dạng phụ tùng? & Khó mua bổ sung và tăng chi phí bảo trì \\
+Chứng từ & Datasheet, nguồn gốc, lô hàng và chứng nhận có đủ? & Khó truy xuất và nghiệm thu \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Đánh giá khả năng thay thế}
+
+Hai sản phẩm có cùng tên chức năng chưa chắc đã thay thế được cho nhau. Với IC
+thì phải so chân, mức điện, tốc độ, tải bus, vỏ và dải nhiệt độ. Với mô-đun
+công nghiệp thì còn phải xem rack, bộ điều khiển đi kèm, phiên bản firmware, cấu
+hình I/O và chứng nhận. Đặc biệt khi sản phẩm đã ngừng sản xuất (chỉ còn dạng
+phụ tùng), chi phí thay thế phải tính cả việc chuyển đổi hệ thống chứ không chỉ
+nhìn giá mô-đun.
+
+\section{Phân tích một số mã sản phẩm đại diện}
+
+\subsection{Bộ thu phát MAX487CSA+T}
+
+Trên trang TECHPAL, MAX487CSA+T được liệt kê trong nhóm linh kiện điện tử, mô
+tả là bộ thu phát bán song công, vỏ SOIC 8 chân \cite{techpal-max487}. Em tra
+trên trang Analog Devices thì thấy MAX487 là IC thu phát RS-485/RS-422 nguồn đơn
+5~V, phiên bản giới hạn tốc độ sườn, hỗ trợ tới 250~kbps. Đầu vào thu có tải
+$1/4$ đơn vị nên về lý thuyết có thể nối tối đa 128 nút trên một bus
+\cite{adi-max487}.
+
+Nếu dùng MAX487CSA+T cho giao tiếp nối tiếp trong thiết kế nhúng thì cần kiểm
+tra thêm mấy thứ: điện áp logic phía vi điều khiển có tương thích 5~V không,
+đường truyền có cần điện trở kết thúc không, bus cần phân cực ra sao, có cần bảo
+vệ ESD không, và nếu hai đầu chênh lệch điện thế đất thì có cần cách ly không.
+Ngoài ra, hậu tố ``T'' liên quan tới quy cách đóng gói (tape and reel) nên khi
+đặt mua không được bỏ.
+
+\subsection{Mô-đun vào tương tự BMXAMI0410}
+
+Mã BMXAMI0410 trên TECHPAL thuộc nhóm thiết bị tự động hóa. Theo Schneider
+Electric, đây là mô-đun Modicon X80 với bốn ngõ vào analog tốc độ cao
+\cite{schneider-bmxami0410}. Khác với một IC rời, mô-đun này không thể dùng
+đơn lẻ mà phụ thuộc vào cả hệ thống: rack nào tương thích, CPU PLC nào, cảm
+biến ra kiểu tín hiệu gì, đấu dây thế nào, phần mềm cấu hình ra sao.
+
+Điều em rút ra ở đây là trong cung ứng tự động hóa, số kênh hay loại tín hiệu
+mới chỉ là điều kiện cần. Muốn chốt mã thì phải xem thêm tài liệu tương thích
+hệ thống và phụ kiện đầu nối. Giả sử khách hàng chỉ nói ``cho mô-đun analog bốn
+kênh'', bên kỹ thuật hoặc Sale cần hỏi thêm đang dùng PLC/rack gì và đo tín
+hiệu dải nào.
+
+\subsection{Mô-đun Siemens 6ES7153-1AA03-0XB0}
+
+TECHPAL có bán mã 6ES7153-1AA03-0XB0. Tra trên trang Siemens, em thấy đây là
+mô-đun kết nối SIMATIC DP IM~153-1 dùng cho trạm ET~200M, hỗ trợ tối đa tám
+mô-đun S7-300. Điểm đáng chú ý là mã này hiện tại Siemens phân loại là
+\textit{phụ tùng} (spare part only) \cite{siemens-im153}.
+
+Trạng thái phụ tùng ảnh hưởng rất lớn đến quyết định mua. Nếu nhà máy đang chạy
+hệ thống cũ và cần thay thế để giảm thời gian dừng máy thì vẫn phải mua mã này.
+Nhưng nếu làm dự án mới thì nên cân nhắc nền tảng khác có vòng đời dài hơn. Em
+nghĩ đây là ví dụ rõ nhất cho thấy kiểm tra vòng đời quan trọng không kém kiểm
+tra thông số kỹ thuật.
+
+\subsection{Bộ ghi dữ liệu CR1000X}
+
+TECHPAL liệt kê CR1000X của Campbell Scientific trong nhóm thiết bị tự động hóa,
+mô tả là bộ lưu trữ xử lý dữ liệu. Tài liệu hãng cho
+biết CR1000X có 16 đầu vào analog đơn (hoặc 8 vi sai), ADC 24 bit, và tích hợp
+sẵn khả năng đo cảm biến, xử lý, lưu trữ lẫn truyền dữ liệu
+\cite{techpal-cr1000x,campbell-cr1000x}.
+
+CR1000X khá phù hợp cho các bài toán thu thập dữ liệu môi trường hay trạm đo
+từ xa. Tuy vậy, không phải cứ thấy 16 kênh là đủ. Người chọn thiết bị phải xem
+kỹ: loại cảm biến, dải đo, độ chính xác cần thiết, chu kỳ lấy mẫu, bộ nhớ, cổng
+giao tiếp, nguồn cấp và điều kiện ngoài trời hay trong nhà. Hãng cũng khuyến cáo
+nên xác nhận cấu hình trước khi đặt mua.
+
+\section{Bài toán khảo sát: thu thập và truyền dữ liệu nhiệt độ}
+
+\subsection{Yêu cầu bài toán}
+
+Để áp dụng thử quy trình đã nêu, em tự đặt ra một bài toán: thiết kế phương án
+thu thập nhiệt độ trong tủ kỹ thuật. Hệ thống cần đo được nhiệt độ, lưu giá trị
+theo thời gian, cảnh báo khi vượt ngưỡng và truyền dữ liệu về máy tính giám sát.
+Cần nhấn mạnh rằng đây chỉ là phương án trên giấy, dùng để so sánh các nhóm
+thiết bị trong danh mục TECHPAL, không phải hệ thống đã lắp đặt hay thử nghiệm.
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu đầu vào của bài toán khảo sát}
+\label{tab:temperature-requirements}
+\begin{tabularx}{\textwidth}{>{\bfseries\raggedright\arraybackslash}p{4.3cm} >{\raggedright\arraybackslash}X}
+\toprule
+Đại lượng đo & Nhiệt độ không khí trong tủ kỹ thuật \\
+Số điểm đo & Từ một điểm, có khả năng mở rộng \\
+Chu kỳ lưu & Có thể cấu hình theo tốc độ biến đổi nhiệt \\
+Chức năng & Hiển thị, lưu dữ liệu và cảnh báo vượt ngưỡng \\
+Truyền thông & Kết nối tới máy tính hoặc mạng giám sát \\
+Nguồn & Chọn theo thiết bị, có bảo vệ và dự phòng phù hợp \\
+Giới hạn báo cáo & Phân tích kiến trúc, chưa chế tạo và chưa có số liệu đo \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Kiến trúc đề xuất}
+
+Tùy vào hệ thống hiện có của khách hàng, phần thu thập dữ liệu có thể là bộ ghi
+chuyên dụng (như CR1000X), mô-đun analog trong hệ PLC (như BMXAMI0410), hoặc một
+bo mạch nhúng tự thiết kế dùng IC RS-485 (như MAX487). Ba hướng này không thay
+thế nhau trực tiếp mà phù hợp với các mức độ tích hợp khác nhau.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  block/.style={draw, rounded corners=2pt, align=center, minimum height=1.1cm,
+                text width=2.30cm, font=\small},
+  line/.style={-{Latex[length=2.3mm]}, thick},
+  node distance=0.35cm
+]
+  \node[block] (sensor) {Cảm biến\\nhiệt độ};
+  \node[block, right=of sensor] (condition) {Đấu nối và\\điều hòa tín hiệu};
+  \node[block, right=of condition] (acquire) {Khối thu thập\\và xử lý};
+  \node[block, right=of acquire] (storage) {Lưu trữ và\\cảnh báo};
+  \node[block, right=of storage] (monitor) {Máy tính hoặc\\mạng giám sát};
+  \draw[line] (sensor) -- (condition);
+  \draw[line] (condition) -- (acquire);
+  \draw[line] (acquire) -- (storage);
+  \draw[line] (storage) -- (monitor);
+\end{tikzpicture}
+\caption{Kiến trúc khái niệm của hệ thống thu thập nhiệt độ}
+\label{fig:temperature-architecture}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Đánh giá vai trò của các mã sản phẩm trong phương án}
+\label{tab:product-role-evaluation}
+\small
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\textwidth}{>{\ttfamily\raggedright\arraybackslash}p{4.1cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+\normalfont\textbf{Mã sản phẩm} & \textbf{Vai trò có thể xem xét} & \textbf{Điều kiện cần xác minh} \\
+\midrule
+CR1000X & Thu thập, xử lý và lưu dữ liệu trong một thiết bị chuyên dụng & Loại cảm biến, dải đo, chu kỳ lấy mẫu, nguồn và giao tiếp \\
+BMXAMI0410 & Nhận tín hiệu analog trong hệ PLC Modicon X80 & Rack, CPU, đầu nối, loại tín hiệu và cấu hình phần mềm \\
+MAX487CSA+T & Tạo giao tiếp RS-485 cho phương án bộ xử lý nhúng & Nguồn 5~V, mức logic, topology bus, kết thúc và bảo vệ \\
+6ES7153-1AA03-0XB0 & Duy trì kết nối I/O phân tán trong hệ ET 200M hiện hữu & Cấu hình trạm, tương thích S7-300 và trạng thái phụ tùng \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Thực tế thì chưa thể chốt phương án nào cho đến khi biết rõ khách hàng dùng cảm
+biến gì, đang có sẵn nền tảng điều khiển nào và yêu cầu vận hành cụ thể ra sao.
+Nếu cần một trạm đo độc lập, bộ ghi dữ liệu kiểu CR1000X sẽ tiện vì nó tích hợp
+sẵn mọi thứ. Nếu nhà máy đã dùng PLC Modicon X80 rồi, mô-đun analog tương thích
+sẽ dễ bảo trì hơn. Còn nếu tự thiết kế bo mạch nhúng, IC RS-485 chỉ là phần giao
+tiếp, không thay thế được bộ thu thập dữ liệu.
+
+\section{Kết quả và kỹ năng thu nhận}
+
+Sau quá trình tìm hiểu, em đã hệ thống hóa được bốn nhóm cung ứng của TECHPAL,
+vẽ được sơ đồ liên hệ giữa Sale, Mua hàng Quốc tế và Logistics, lập một bảng
+kiểm kỹ thuật và đối chiếu bốn mã sản phẩm với datasheet của hãng. Bài toán nhiệt
+độ giúp em thử áp dụng cách chuyển từ yêu cầu chức năng sang kiến trúc và danh
+sách thông tin cần kiểm tra.
+
+Điều em thấy quan trọng nhất là không nên ra quyết định chỉ vì tên sản phẩm nghe
+hợp lý hay mô tả ngắn trên web trùng khớp. Mỗi mã linh kiện đều cần kiểm tra
+bằng datasheet, tài liệu hệ thống và trạng thái vòng đời. Ngoài kiến thức chuyên
+ngành, công việc cung ứng còn đòi hỏi khả năng đọc tiếng Anh, ghi chép cẩn thận
+và phối hợp giữa nhiều bộ phận. Báo cáo của em dừng ở mức khảo sát tài liệu và
+đề xuất phương án, chưa có nguyên mẫu hoặc số liệu đo thực tế.
