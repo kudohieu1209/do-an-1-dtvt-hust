@@ -1,5 +1,5 @@
 % Báo cáo tiến độ Đồ án 1 (Gồm trang bìa chuẩn HUST và nội dung gói gọn đúng trong 1 trang A4)
-% Định dạng tuân thủ chặt chẽ quy chuẩn trình bày báo cáo ĐHBK Hà Nội (report/)
+% Định dạng tuân thủ chặt chẽ bố cục báo cáo tiến độ Đồ án 1
 \documentclass[11pt,a4paper]{article}
 
 \usepackage{fontspec}
@@ -91,11 +91,11 @@
   {\fontsize{13}{18}\selectfont
   \begin{tabular}{@{}>{\bfseries}l@{\hspace{1.2em}}l@{}}
     Giảng viên hướng dẫn: & TS. Bùi Tiến Cường \\
-    Sinh viên thực hiện:  & Mai Duy Hiếu \\
+    Sinh viên thực hiện:  & Mai Duy Hiếu - 20223967 \\
   \end{tabular}\par}
 
   \vfill
-  {\bfseries\fontsize{13}{17}\selectfont Hà Nội, 10/2026}
+  {\bfseries\fontsize{13}{17}\selectfont Hà Nội, ngày 24 tháng 10 năm 2026}
 \end{center}
 \end{titlepage}
 \restoregeometry
@@ -111,28 +111,20 @@
 \end{center}
 \vspace{0.35cm}
 
-\section{Tiến độ}
-
+\section{Tiến độ đã thực hiện}
 \begin{itemize}
-  \item \textbf{Cải thiện hệ thống RAG và chất lượng phản hồi của Chatbot:} Chuẩn hóa kho dữ liệu vector bằng các văn bản kiểm chứng chính thức gồm Sổ tay sinh viên 2026, Quyết định Học phí 2025--2026, chương trình đào tạo ngành Kỹ thuật Điện tử Viễn thông khóa 67 và khóa 68; hoàn thiện bộ quy tắc kiểm tra điều kiện học phần (tiên quyết, học trước) trước khi đưa ra gợi ý môn học; tích hợp cơ chế trích xuất nguyên văn có dẫn nguồn tham khảo khi dịch vụ mô hình ngôn ngữ gặp sự cố.
-  
-  \item \textbf{Xây dựng bộ dữ liệu đánh giá định lượng:} Thiết lập bộ dữ liệu chuẩn gồm 96 câu hỏi kiểm thử thuộc 9 nhóm tác vụ thực tế (tra cứu quy chế, học phí, học bổng, kiểm tra môn học, rà soát tốt nghiệp, gợi ý môn học, mô phỏng điểm tích lũy...); hoàn thành quy trình kiểm thử tự động đo lường định lượng các chỉ số truy xuất tài liệu, độ chính xác phân loại ý định, độ chính xác nhận diện mã môn học và thời gian phản hồi thay vì đánh giá cảm tính.
-  
-  \item \textbf{Chuyển đổi cơ sở dữ liệu sang MongoDB:} Chuyển đổi toàn diện hệ thống lưu trữ sang cơ sở dữ liệu hướng tài liệu MongoDB nhằm quản lý linh hoạt hồ sơ sinh viên, thông tin cá nhân và bảng điểm lồng nhau; lưu trữ toàn bộ lịch sử hội thoại của người dùng; cấu hình chỉ mục tự động thu hồi để dọn dẹp các phiên làm việc hết hạn; xây dựng kịch bản chuyển đổi dữ liệu tự động và hỗ trợ cơ chế lưu trữ dự phòng khi chạy ngoại tuyến.
-  
-  \item \textbf{Cải thiện giao diện và bổ sung tính năng người dùng:} Thiết kế bộ nhận diện thương hiệu gồm biểu trưng ứng dụng và bảng màu chuẩn Đại học Bách Khoa Hà Nội; bổ sung màn hình tổng hợp nhanh điểm tích lũy, số tín chỉ và cảnh báo học tập; tích hợp chức năng nhập bảng điểm trực tiếp để hệ thống tự động rà soát tiến độ tốt nghiệp và đưa ra tư vấn môn học tức thời; tối ưu hóa thanh điều hướng và menu quản lý tài khoản.
+  \item \textbf{Dữ liệu và xử lý học vụ:} Chuẩn hóa CTĐT ET1--2022 (126 tín chỉ, 117 học phần) và ET1--2023 (132 tín chỉ, 79 học phần); duy trì phiên bản và nguồn. Rule Engine kiểm tra điều kiện tiên quyết, học trước, song hành theo nhánh AND/OR; rà soát CPA, nhóm tín chỉ và điều kiện tốt nghiệp theo hồ sơ. Môn ngoài danh mục cần xác nhận tín chỉ; mức cảnh báo và chuẩn đầu ra chưa biết được ghi rõ, không tự kết luận đã đạt.
+  \item \textbf{RAG có dẫn nguồn:} Kho tin cậy gồm 5 tài liệu về CTĐT, quy chế, sổ tay sinh viên và học phí. Chỉ nguồn đã phê duyệt được lập chỉ mục; phân đoạn theo cấu trúc điều/khoản, kết hợp truy xuất từ khóa và vector, giữ ngữ cảnh điều khoản và phạm vi áp dụng. Khi thiếu API key, dùng chế độ trích xuất cục bộ có dẫn nguồn.
+  \item \textbf{MongoDB, tài khoản và hội thoại:} Thống nhất dữ liệu nghiệp vụ về MongoDB; bỏ nhánh SQLite và hồ sơ JSON của ứng dụng, giữ Chroma cho chỉ mục RAG. Có đăng ký, đăng nhập, đổi mật khẩu, cookie HttpOnly và phân quyền hồ sơ/hội thoại. Context hiểu câu hỏi nối tiếp và hỏi rõ khi tham chiếu nhiều môn. Sinh viên tự bật, sửa hoặc xóa định hướng, tải tín chỉ và mục tiêu CPA trong mục Ghi nhớ học tập.
+  \item \textbf{Giao diện và khả năng tái lập:} Hoàn thiện nhập bảng điểm, audit, gợi ý môn và trạng thái thiếu dữ liệu/mất kết nối. Kiểm thử dùng hồ sơ tổng hợp và MongoDB giả lập; không cần dữ liệu cá nhân hay khóa API. Bổ sung hướng dẫn Windows/Linux và quy trình kiểm thử tự động từ checkout sạch.
 \end{itemize}
-
+\section{Kết quả kiểm tra và giới hạn}
+Bộ hồi quy gồm \textbf{100 câu}, đo tự động ở chế độ \textbf{không gọi LLM}: phân loại ý định, nhận diện mã môn, Recall@4 và khớp ý chính đạt 100\%; MRR@4 đạt 80,7\%. Tập \textbf{20 câu diễn đạt bổ sung} có Recall@4 93,3\%, khớp ý chính 92,9\%; còn một ca học phí tiến sĩ chưa đạt. Kết quả này không đồng nghĩa độ đúng 100\% ngoài thực tế hoặc chất lượng Gemini đã được nghiệm thu. Bản bàn giao hiện chạy local và mới chuẩn hóa dữ liệu cho ET1.
 \section{Kế hoạch tiếp theo}
-
 \begin{itemize}
-  \item \textbf{Mở rộng nguồn tài liệu tham khảo:} Tiếp tục thu thập và bổ sung nhiều nguồn tài liệu tham khảo chính thức từ nhà trường, bao gồm các văn bản quy định đào tạo mới, quy chế công tác sinh viên, sổ tay sinh viên các khóa mới và khung chương trình đào tạo của các ngành đào tạo khác trong toàn trường.
-  
-  \item \textbf{Phát triển tính năng Đăng ký, Đăng nhập và Bảo mật:} Nghiên cứu và hiện thực hóa phân hệ quản lý tài khoản người dùng hoàn chỉnh gồm chức năng Đăng ký tài khoản, Đăng nhập và Đổi mật khẩu.
-  
-  \item \textbf{Hoàn thiện giao diện người dùng và tối ưu hoạt ảnh:} Hoàn thiện toàn diện thiết kế giao diện UI/UX trên các màn hình chức năng; tối ưu hóa các hiệu ứng hoạt ảnh chuyển động mượt mà cho chatbot trò chuyện.
-  
-  \item \textbf{Tối ưu hóa chất lượng tư vấn:} Nâng cao độ chính xác của khâu phân đoạn tài liệu quy chế đối với các điều khoản có bảng biểu phức tạp; tinh chỉnh bộ lọc và xếp hạng lại văn bản truy xuất.
+  \item \textbf{Đánh giá và mở rộng dữ liệu:} Bổ sung câu hỏi độc lập, chấm tính đúng của trả lời và dẫn nguồn; xử lý ca chưa đạt và chuẩn hóa thêm CTĐT từ nguồn chính thức.
+  \item \textbf{Công cụ và kế hoạch học tập:} Tách công cụ học vụ có schema và kiểm tra quyền để tiến tới LLM Tool Calling; phát triển planner nhiều kỳ và mô phỏng CPA theo mục tiêu. Mục tiêu CPA hiện mới được lưu, chưa có bộ mô phỏng điểm theo mục tiêu cá nhân.
+  \item \textbf{Triển khai và hoàn thiện sản phẩm:} Chuẩn bị HTTPS, proxy/cookie production, giám sát vận hành; bổ sung feedback/admin và cảnh báo chủ động sau khi có kiểm định chất lượng.
 \end{itemize}
-
+\noindent\textit{Mã nguồn và báo cáo đánh giá:} \url{https://github.com/kudohieu1209/do-an-1-dtvt-hust}.
 \end{document}

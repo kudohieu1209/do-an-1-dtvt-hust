@@ -3,13 +3,13 @@
 > **Giảng viên hướng dẫn:** Thầy Bùi Tiến Cường  
 > **Sinh viên thực hiện:** Mai Duy Hiếu - MSSV: 20223967  
 > **Học phần:** Đồ án 1 (Học kỳ 2026.1) - Viện Điện tử - Viễn thông / ĐHBK Hà Nội  
-> **Nguồn tư liệu gốc:** Các email hướng dẫn (`docs/mail/`) và sơ đồ kiến trúc định hướng (`docs/theory/`)  
+> **Nguồn tư liệu gốc:** Ghi chú trao đổi hướng dẫn và sơ đồ kiến trúc định hướng (`docs/theory/image.png`). Email gốc là tài liệu trao đổi riêng, không đóng gói trong repo công khai.
 
 ---
 
 ## 1. Bối cảnh & Các hướng đề tài Thầy gợi ý ban đầu
 
-Vào ngày **13/09/2026 (17:44)**, Thầy Bùi Tiến Cường đã gửi email định hướng cho sinh viên 3 hướng đề tài có tính ứng dụng cao thực tế tại ĐHBK Hà Nội *(Nguồn: `docs/mail/topics.png`)*:
+Vào ngày **13/09/2026 (17:44)**, Thầy Bùi Tiến Cường đã gửi email định hướng cho sinh viên 3 hướng đề tài có tính ứng dụng cao thực tế tại ĐHBK Hà Nội *(theo ghi chú trao đổi; email gốc không công khai)*:
 
 1. **Đề tài 1: Hệ thống quản lý đồ thất lạc (Lost & Found)**
    - *Mô tả:* Sử dụng AI để so sánh hình ảnh đồ vật thất lạc và văn bản mô tả để ghép nối người mất và người nhặt được.
@@ -27,7 +27,7 @@ Nhận thấy nhu cầu cấp thiết của sinh viên vừa cần tra cứu quy
 
 ## 2. Chi tiết các yêu cầu & Chỉ đạo kỹ thuật của Thầy
 
-Trong email trao đổi tiếp theo *(Nguồn: `docs/mail/counsel.png`)*, Thầy đã phản hồi và đưa ra các chỉ đạo chuyên môn cụ thể:
+Trong email trao đổi tiếp theo *(theo ghi chú trao đổi; email gốc không công khai)*, Thầy đã phản hồi và đưa ra các chỉ đạo chuyên môn cụ thể:
 
 ### 2.1. Về phạm vi đề tài và dữ liệu (Data-Centric)
 * **Ý kiến của Thầy:** *"Mình nghĩ là tư vấn cho chỉ SV Điện tử hay sinh viên toàn trường thì không khác nhau mấy. Quan trọng là tài liệu của em thu thập được sẽ như nào thôi."*
@@ -63,7 +63,7 @@ Dưới đây là bảng tổng hợp cách dự án đã đáp ứng và cụ t
 | **2** | **Xây dựng RAG + Gemini** | Tích hợp pipeline RAG: Document Loader chia nhỏ văn bản (Chunking) $\rightarrow$ Vector Embeddings lưu trữ tại ChromaDB $\rightarrow$ Google Gemini API (mặc định `gemini-2.5-flash`) trả lời kèm trích dẫn. Khi không có API key, hệ thống chuyển sang chế độ trích xuất cục bộ có dẫn nguồn. | `project/backend/app/rag/` |
 | **3** | **Thu thập dữ liệu CTĐT & Quy chế** | Kho RAG tin cậy gồm 5 tài liệu đã đối chiếu: CTĐT ET1 năm 2022 và 2023, Quy chế đào tạo 2025, Sổ tay sinh viên 2026 và Quyết định học phí 2025–2026. Ba bản nháp cũ được gắn `RAG_STATUS: UNVERIFIED` và không được lập chỉ mục. | `project/data/documents/` |
 | **4** | **Tư vấn chọn môn dựa trên CTĐT & Điều kiện ĐK** | Chức năng cốt lõi dùng Rule Engine để kiểm tra điều kiện tiên quyết, học trước, song hành và tư vấn lựa chọn môn. Graph/Ripple Effect là phần mở rộng nội bộ, không đưa vào giao diện MVP. | `project/backend/app/engine/rule_engine.py` |
-| **5** | **Rà soát quy chế & Bổ sung Dashboard (phần mở rộng của sinh viên)** | Xây dựng thêm Rule Engine mô phỏng quy chế HUST (tính CPA, kiểm tra cảnh cáo mức 1/2/3, hạn mức tín chỉ được đăng ký) và Tab Degree Audit trực quan hóa tiến độ tích lũy 126 tín chỉ tốt nghiệp. | `project/backend/app/engine/rule_engine.py` & `project/frontend/src/components/AuditTab.jsx` |
+| **5** | **Rà soát quy chế & Bổ sung Dashboard (phần mở rộng của sinh viên)** | Xây dựng thêm Rule Engine mô phỏng quy chế HUST (tính CPA, kiểm tra cảnh cáo mức 1/2/3, hạn mức tín chỉ được đăng ký) và Tab Degree Audit trực quan hóa tiến độ theo đúng CTĐT (126 TC cho ET1–2022, 132 TC cho ET1–2023). | `project/backend/app/engine/rule_engine.py` & `project/frontend/src/components/AuditTab.jsx` |
 
 ---
 
@@ -78,4 +78,4 @@ Khi trình bày hoặc báo cáo định kỳ với Thầy Bùi Tiến Cường,
    - Trực tiếp demo kịch bản hỏi đáp với từ lóng của sinh viên (VD: "vxl", "dts", "vi mạch", "ckđt").
    - Có thể giới thiệu Graph/Ripple Effect như hướng mở rộng sau MVP nếu còn thời gian; không xem đây là yêu cầu bắt buộc của đề tài.
 3. **Hiệu năng & Tối ưu:** 
-   - Giải thích việc dùng Hybrid AI: Các câu hỏi về dữ liệu cố định (tiên quyết, số tín chỉ, công thức tính CPA) được xử lý bằng thuật toán Deterministic Code (Graph/Rule Engine) để đảm bảo chính xác 100% và tiết kiệm token; chỉ các câu hỏi ngữ nghĩa, tra cứu quy chế mới chuyển qua RAG + Gemini LLM.
+   - Giải thích việc dùng Hybrid AI: Các câu hỏi về dữ liệu cố định (tiên quyết, số tín chỉ, công thức tính CPA) được xử lý bằng thuật toán Deterministic Code (Graph/Rule Engine) để kết quả tính toán có thể kiểm tra bằng quy tắc và giảm số lần gọi LLM; độ đúng vẫn cần được kiểm thử theo dữ liệu và ca thực tế; chỉ các câu hỏi ngữ nghĩa, tra cứu quy chế mới chuyển qua RAG + Gemini LLM.
