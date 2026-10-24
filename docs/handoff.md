@@ -9,6 +9,8 @@
    Linux/macOS/Git Bash. Không cần file hồ sơ cá nhân, MongoDB thật hoặc API key.
 4. Đọc [100 câu hồi quy](../project/eval/reports/handoff_20261024.md) và
    [20 câu diễn đạt bổ sung](../project/eval/reports/validation_handoff_20261024.md).
+5. Xem [biên bản kiểm tra clone sạch](validation_handoff_20261024.md):
+   217 test đạt, frontend lint/build đạt, npm audit không báo lỗ hổng.
 
 ## Phạm vi đã triển khai
 
